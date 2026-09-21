@@ -67,6 +67,7 @@
   }
   function prepare() {
     Object.keys(clips).forEach(decode);
+    prepareBuiltin(IT.store.settings().voiceType === 'male' ? 'male' : 'female');
   }
 
   function playBuffer(buf, c, volume) {
@@ -87,6 +88,61 @@
     if (!c || !A.context()) return false;
     if (bufs[key]) playBuffer(bufs[key], c, volume);
     else decode(key).then(function (b) { playBuffer(b, c, volume); });
+    return true;
+  }
+
+  // ----- built-in Female / Male voices -----
+  // Small pre-made audio clips (voices/female/*.mp3, voices/male/*.mp3) played through
+  // Web Audio. Unlike the phone's own text-to-speech, playing them as ordinary sound
+  // does not lower (duck) music from other apps on iPhone.
+  var builtin = { bufs: {}, loading: {}, failed: false };
+
+  function loadBuiltin(kind, key) {
+    var id = kind + '/' + key;
+    if (builtin.bufs[id]) return Promise.resolve(builtin.bufs[id]);
+    if (builtin.loading[id]) return builtin.loading[id];
+    var pr = g.fetch('voices/' + id + '.mp3').then(function (r) {
+      if (!r.ok) throw new Error('missing');
+      return r.arrayBuffer();
+    }).then(decodeRaw).then(function (b) {
+      builtin.bufs[id] = b;
+      return b;
+    }).catch(function () {
+      builtin.failed = true;
+      return null;
+    }).then(function (b) {
+      delete builtin.loading[id];
+      return b;
+    });
+    builtin.loading[id] = pr;
+    return pr;
+  }
+  function prepareBuiltin(kind) {
+    builtin.failed = false; // try again on every start
+    PHRASES.forEach(function (p) { loadBuiltin(kind, p.key); });
+  }
+  function playPlain(buf, volume) {
+    var ctx = A.context();
+    if (!ctx || !buf) return;
+    var src = ctx.createBufferSource();
+    var gn = ctx.createGain();
+    src.buffer = buf;
+    gn.gain.value = Math.max(0.0001, volume);
+    src.connect(gn);
+    gn.connect(ctx.destination);
+    src.start(0);
+  }
+  // True if the clip is playing or will play as soon as it has loaded. If it can't
+  // be loaded at all, onFail runs (the caller then falls back to phone speech).
+  function playBuiltin(kind, key, volume, onFail) {
+    if (!A.context()) return false;
+    var b = builtin.bufs[kind + '/' + key];
+    if (b) { playPlain(b, volume); return true; }
+    if (builtin.failed) return false;
+    loadBuiltin(kind, key).then(function (buf) {
+      if (buf) playPlain(buf, volume);
+      else if (onFail) onFail();
+    });
     return true;
   }
 
@@ -324,6 +380,6 @@
       });
   });
 
-  IT.voice = { PHRASES: PHRASES, load: load, prepare: prepare, play: play, has: has, status: status, open: open, clearAll: clearAll };
+  IT.voice = { PHRASES: PHRASES, load: load, prepare: prepare, play: play, playBuiltin: playBuiltin, builtinFailed: function () { return builtin.failed; }, has: has, status: status, open: open, clearAll: clearAll };
   load();
 })(self);

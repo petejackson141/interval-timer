@@ -3,6 +3,6 @@
 // also makes the browser install a fresh service worker and cache.
 (function (g) {
   g.IT = g.IT || {};
-  g.IT.RELEASE = 'v1.6'; // release number shown in Settings (matches the zip name)
-  g.IT.VERSION = '21.09.2026.1836';
+  g.IT.RELEASE = 'v1.7'; // release number shown in Settings (matches the zip name)
+  g.IT.VERSION = '21.09.2026.1850';
 })(self);

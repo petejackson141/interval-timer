@@ -8,6 +8,7 @@ var ASSETS = [
   './', 'index.html', 'manifest.json', 'css/style.css',
   'js/config.js', 'js/model.js', 'js/store.js', 'js/ui.js', 'js/audio.js', 'js/voice.js',
   'js/library.js', 'js/builder.js', 'js/player.js', 'js/app.js',
+  'voices/female/finish.mp3', 'voices/female/getready.mp3', 'voices/female/half.mp3', 'voices/female/n1.mp3', 'voices/female/n2.mp3', 'voices/female/n3.mp3', 'voices/female/reset.mp3', 'voices/female/rest.mp3', 'voices/female/work.mp3', 'voices/male/finish.mp3', 'voices/male/getready.mp3', 'voices/male/half.mp3', 'voices/male/n1.mp3', 'voices/male/n2.mp3', 'voices/male/n3.mp3', 'voices/male/reset.mp3', 'voices/male/rest.mp3', 'voices/male/work.mp3',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'
 ];
 

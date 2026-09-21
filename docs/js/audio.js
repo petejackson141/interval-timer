@@ -55,7 +55,7 @@
   // Does anything need the browser's built-in speech? (Only then does it need waking up.)
   function usesSystemSpeech() {
     var s = IT.store.settings();
-    return s.voiceType !== 'mine' && (s.countdown === 'voice' || s.half === 'voice' || s.names);
+    return !!(IT.voice && IT.voice.builtinFailed()) && (s.countdown === 'voice' || s.half === 'voice' || s.names);
   }
 
   function unlock() {
@@ -146,11 +146,7 @@
       var st = IT.voice ? IT.voice.status() : { have: 0, total: 9 };
       return st.have ? st.have + ' of ' + st.total + ' phrases recorded. Anything not recorded uses the female voice.' : 'No phrases recorded yet.';
     }
-    var v = pickVoice(s.voiceType);
-    if (v) return 'Using the “' + v.name.replace(/\s*\(.*\)\s*$/, '') + '” voice on this phone.';
-    return s.voiceType === 'male'
-      ? 'No male voice found on this phone, so this is a deeper version of the default voice.'
-      : 'Using the phone’s default voice.';
+    return (s.voiceType === 'male' ? 'Male' : 'Female') + ' voice built into the app. It plays as sound, so your music isn’t lowered.';
   }
   try {
     if ('speechSynthesis' in g) {
@@ -180,10 +176,14 @@
     } catch (e) { return false; }
   }
 
-  // Say a phrase in whichever voice is chosen: my own recording if there is one
-  // for this phrase, otherwise the synthesised voice.
+  // Say a phrase in whichever voice is chosen: my own recording if there is one for
+  // this phrase, otherwise the built-in clip for that voice. The phone's own speech
+  // is only a last resort, because on iPhone it lowers the music volume.
   function speak(key, text, volume) {
-    if (IT.store.settings().voiceType === 'mine' && IT.voice && IT.voice.play(key, volume)) return true;
+    var s = IT.store.settings();
+    if (s.voiceType === 'mine' && IT.voice && IT.voice.play(key, volume)) return true;
+    var kind = s.voiceType === 'male' ? 'male' : 'female';
+    if (IT.voice && IT.voice.playBuiltin(kind, key, volume, function () { say(text, { volume: volume }); })) return true;
     return say(text, { volume: volume });
   }
 
