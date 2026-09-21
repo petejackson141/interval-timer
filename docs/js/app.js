@@ -28,7 +28,7 @@
   function openDrawer() {
     var pid = IT.player.currentId();
     ui.drawer(
-      '<div class="drawer-head"><strong>Interval Timer</strong><span>Version ' + IT.VERSION + '</span></div>' +
+      '<div class="drawer-head"><strong>Interval Timer</strong><span>' + IT.RELEASE + '</span><span>Version ' + IT.VERSION + '</span></div>' +
       '<nav class="menu">' +
         navBtn('nav-home', 'list', 'My workouts') +
         navBtn('nav-new', 'plus', 'New workout') +
@@ -71,6 +71,8 @@
   function openSettings() {
     ui.sheet(
       '<h2 class="sheet-title">Settings</h2>' +
+      '<div class="vercard"><div><span class="vdate">Version ' + IT.VERSION + '</span><strong class="vrel">' + IT.RELEASE + '</strong></div>' +
+        '<button class="btn ghost" data-act="check-update">Check for updates</button></div>' +
 
       '<section class="setsec"><h3>Voice</h3>' +
         '<p class="setdesc">Used wherever a setting below is set to Voice, and for section names.</p>' +
@@ -112,9 +114,7 @@
       '<section class="setsec"><h3>Library backup</h3>' +
         '<div class="setbtns"><button class="btn ghost" data-act="export">Export library</button>' +
         '<button class="btn ghost" data-act="import">Import library</button></div>' +
-      '</section>' +
-
-      '<p class="version">Version ' + IT.VERSION + '<strong>' + IT.RELEASE + '</strong></p>'
+      '</section>'
     );
   }
 
@@ -247,6 +247,42 @@
       ui.toast('That text isn’t a valid export');
     }
   });
+
+  // ----- updates -----
+  // A home-screen app can stay suspended for days and never reload, so look for a
+  // newer version whenever the app comes back to the front.
+  var lastCheck = 0;
+  function applyUpdate() {
+    function done() { g.location.reload(); }
+    try {
+      if (g.caches) {
+        g.caches.keys().then(function (keys) {
+          return Promise.all(keys.filter(function (k) { return k.indexOf('intervaltimer-') === 0; })
+            .map(function (k) { return g.caches.delete(k); }));
+        }).then(done, done);
+      } else done();
+    } catch (e) { done(); }
+  }
+  function checkUpdate(manual) {
+    if (!manual && Date.now() - lastCheck < 60000) return;
+    lastCheck = Date.now();
+    if (g.navigator.onLine === false) { if (manual) ui.toast('You’re offline. Connect to check for updates.'); return; }
+    g.fetch('js/config.js', { cache: 'no-store' }).then(function (r) { return r.text(); }).then(function (t) {
+      var m = /VERSION\s*=\s*'([^']+)'/.exec(t);
+      if (!m) { if (manual) ui.toast('Couldn’t check for updates.'); return; }
+      if (m[1] === IT.VERSION) { if (manual) ui.toast('You’re on the latest version'); return; }
+      if (IT.player.isRunning()) return; // never interrupt a workout
+      var hash = g.location.hash || '#/';
+      if (manual || hash === '#/' || hash === '#') {
+        if (manual) ui.toast('Updating…');
+        applyUpdate();
+      } else {
+        ui.toast('New version ' + m[1] + ' is ready', { label: 'Reload', fn: applyUpdate });
+      }
+    }).catch(function () { if (manual) ui.toast('Couldn’t check for updates.'); });
+  }
+  on('check-update', function () { checkUpdate(true); });
+  doc.addEventListener('visibilitychange', function () { if (!doc.hidden) checkUpdate(false); });
 
   // ----- global listeners -----
   doc.addEventListener('click', function (e) {

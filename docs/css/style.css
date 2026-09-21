@@ -536,3 +536,9 @@ button:focus-visible, [role="button"]:focus-visible { outline: 3px solid #2B5BFF
 #myvoice .setbtns .btn { min-height: 52px; }
 
 .version strong { display: block; margin-top: 2px; color: var(--ink); font-size: 18px; font-weight: 800; }
+
+/* ---- version card at the top of Settings ---- */
+.vercard { display: flex; flex-direction: column; gap: 10px; margin: 0 0 4px; padding: 14px; background: #F1F2F6; border-radius: 18px; }
+.vercard .vdate { display: block; color: var(--muted); font-size: 14px; font-weight: 600; }
+.vercard .vrel { display: block; font-size: 24px; font-weight: 800; line-height: 1.15; }
+.vercard .btn { min-height: 46px; padding: 0 14px; font-size: 16px; background: #fff; }
