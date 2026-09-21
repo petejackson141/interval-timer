@@ -3,7 +3,7 @@
 // walks through.
 //
 // A workout is an ordered list of sections. Most are timed (Get ready, Work,
-// Rest, Round reset). Two are repeat counts that act on what sits ABOVE them:
+// Rest, Round rest). Two are repeat counts that act on what sits ABOVE them:
 //   Exercises x N  repeats the sections above it since the previous repeat count
 //                  (so N = how many exercises are in each set)
 //   Rounds x N     repeats everything above it since the previous Rounds count
@@ -21,7 +21,7 @@
     rest:      { key: 'rest',      label: 'Rest',        kind: 'time',  def: 10, blurb: 'Time to recover' },
     exercises: { key: 'exercises', label: 'Exercises',   kind: 'count', def: 4,  unit: 'exercises', blurb: 'Exercises per set. Repeats what is above it' },
     rounds:    { key: 'rounds',    label: 'Rounds',      kind: 'count', def: 3,  unit: 'rounds',    blurb: 'Sets in total. Repeats everything above' },
-    reset:     { key: 'reset',     label: 'Round reset', kind: 'time',  def: 30, blurb: 'A longer break between rounds' }
+    reset:     { key: 'reset',     label: 'Round rest', kind: 'time',  def: 30, blurb: 'A longer break between rounds' }
   };
   var ORDER = ['getready', 'work', 'rest', 'exercises', 'rounds', 'reset'];
   var MAX_SECONDS = 7200;
@@ -98,7 +98,7 @@
     return { cover: cover, info: info };
   }
 
-  // Flatten a workout into timed segments. A Rest or Round reset that would be
+  // Flatten a workout into timed segments. A Rest or Round rest that would be
   // the very last thing in the workout is dropped: nothing follows it.
   function expand(w) {
     var out = [];
@@ -187,7 +187,7 @@
 
   function starterItems() {
     var items = ['getready', 'work', 'rest', 'exercises', 'reset', 'rounds'].map(newItem);
-    return items; // Get ready 10, Work 30, Rest 10, Exercises 4, Round reset 30, Rounds 3
+    return items; // Get ready 10, Work 30, Rest 10, Exercises 4, Round rest 30, Rounds 3
   }
 
   function exampleWorkout() {
@@ -196,7 +196,7 @@
     items[1].value = 15; // Work
     items[2].value = 1;  // Rest
     items[3].value = 4;  // Exercises
-    items[4].value = 15; // Round reset
+    items[4].value = 15; // Round rest
     items[5].value = 4;  // Rounds
     var now = Date.now();
     return { id: 'example', name: 'Example: 5-min blast', items: items, createdAt: now, updatedAt: now };

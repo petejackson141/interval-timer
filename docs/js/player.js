@@ -182,7 +182,7 @@
   function segmentStart() {
     var seg = P.exp.segments[P.idx];
     A.cue(seg.type);
-    A.announce(M.TYPES[seg.type].label);
+    A.announce(seg.type, M.TYPES[seg.type].label);
   }
 
   function tick() {
@@ -245,7 +245,7 @@
     P.acc = P.exp.total * 1000;
     P.idx = P.exp.segments.length - 1;
     A.cue('finish');
-    A.announce('Workout complete');
+    A.announce('finish', 'Workout complete');
     releaseWake();
     renderState();
     setTimeout(function () { if (P && P.status === 'done') A.suspend(); }, 2500);

@@ -62,15 +62,20 @@
   // ----- overlays -----
   var overlayEl = null;
   var dialogResolve = null;
+  var sticky = false;     // a sticky overlay ignores taps on the dark area and Escape
+  var closeHook = null;   // runs once when the overlay is closed (e.g. stop a recording)
 
-  function openOverlay(html, cls) {
+  function openOverlay(html, cls, isSticky) {
     if (!overlayEl) overlayEl = document.getElementById('overlay');
     settleDialog(false);
-    overlayEl.innerHTML = '<div class="scrim" data-act="close-overlay"></div><div class="' + cls + '" role="dialog" aria-modal="true">' + html + '</div>';
+    sticky = !!isSticky;
+    overlayEl.innerHTML = '<div class="scrim"' + (sticky ? '' : ' data-act="close-overlay"') + '></div><div class="' + cls + '" role="dialog" aria-modal="true">' + html + '</div>';
     overlayEl.classList.add('on');
   }
   function closeOverlay() {
     if (!overlayEl) overlayEl = document.getElementById('overlay');
+    if (closeHook) { var h = closeHook; closeHook = null; h(); }
+    sticky = false;
     settleDialog(false);
     overlayEl.classList.remove('on');
     overlayEl.innerHTML = '';
@@ -78,7 +83,9 @@
   function isOverlayOpen() {
     return !!(overlayEl && overlayEl.classList.contains('on'));
   }
-  function sheet(html) { openOverlay('<div class="grab"></div>' + html, 'sheet'); }
+  function sheet(html, opts) { openOverlay('<div class="grab"></div>' + html, 'sheet', opts && opts.sticky); }
+  function setCloseHook(fn) { closeHook = fn; }
+  function isOverlaySticky() { return sticky; }
   function drawer(html) { openOverlay(html, 'drawer'); }
 
   function settleDialog(v) {
@@ -129,7 +136,7 @@
 
   IT.ui = {
     esc: esc, icon: icon, tIcon: tIcon, strip: strip, app: app,
-    sheet: sheet, drawer: drawer, closeOverlay: closeOverlay, isOverlayOpen: isOverlayOpen,
+    sheet: sheet, setCloseHook: setCloseHook, isOverlaySticky: isOverlaySticky, drawer: drawer, closeOverlay: closeOverlay, isOverlayOpen: isOverlayOpen,
     settleDialog: settleDialog, confirmDialog: confirmDialog,
     toast: toast, hideToast: hideToast, on: on, dispatch: dispatch, setThemeColor: setThemeColor
   };

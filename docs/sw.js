@@ -6,7 +6,7 @@ importScripts('js/config.js');
 var CACHE = 'intervaltimer-' + self.IT.VERSION;
 var ASSETS = [
   './', 'index.html', 'manifest.json', 'css/style.css',
-  'js/config.js', 'js/model.js', 'js/store.js', 'js/ui.js', 'js/audio.js',
+  'js/config.js', 'js/model.js', 'js/store.js', 'js/ui.js', 'js/audio.js', 'js/voice.js',
   'js/library.js', 'js/builder.js', 'js/player.js', 'js/app.js',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'
 ];

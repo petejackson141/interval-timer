@@ -61,9 +61,24 @@
       '<output>' + pct + '%</output></div>';
   }
 
+  function myVoicePanel() {
+    var st = IT.voice.status();
+    return '<p class="setdesc">Record yourself saying the countdown and call-outs. You’ll be prompted for each phrase, one at a time.</p>' +
+      '<div class="setbtns"><button class="btn" data-act="v-open">' + (st.have ? 'Record or re-record' : 'Record my voice') + '</button>' +
+      (st.have ? '<button class="btn ghost" data-act="v-clear">Delete recordings</button>' : '') + '</div>';
+  }
+
   function openSettings() {
     ui.sheet(
       '<h2 class="sheet-title">Settings</h2>' +
+
+      '<section class="setsec"><h3>Voice</h3>' +
+        '<p class="setdesc">Used wherever a setting below is set to Voice, and for section names.</p>' +
+        setSeg('voiceType', [['female', 'Female'], ['male', 'Male'], ['mine', 'My voice']]) +
+        '<p class="setdesc" id="voice-info">' + ui.esc(A.voiceInfo()) + '</p>' +
+        '<div id="myvoice"' + (S.settings().voiceType === 'mine' ? '' : ' hidden') + '>' + myVoicePanel() + '</div>' +
+        '<button class="btn ghost wide" data-act="test-voice">Test voice</button>' +
+      '</section>' +
 
       '<section class="setsec"><h3>Countdown</h3>' +
         '<p class="setdesc">Plays in the last 3 seconds of every section: three beeps, or a spoken 3, 2, 1.</p>' +
@@ -185,6 +200,12 @@
   on('set-choice', function (el) {
     S.setSetting(el.getAttribute('data-key'), el.getAttribute('data-val'));
     dimSlider(el.getAttribute('data-key'), el.getAttribute('data-val') === 'off');
+    if (el.getAttribute('data-key') === 'voiceType') {
+      var mv = doc.getElementById('myvoice');
+      if (mv) mv.hidden = el.getAttribute('data-val') !== 'mine';
+      var vi = doc.getElementById('voice-info');
+      if (vi) vi.textContent = A.voiceInfo();
+    }
     var sibs = el.parentNode.querySelectorAll('button');
     for (var i = 0; i < sibs.length; i++) {
       var on = sibs[i] === el;
@@ -196,6 +217,7 @@
     setTimeout(function () { if (!IT.player.isRunning()) A.suspend(); }, 3500);
   }
   on('test-countdown', function () { A.testCountdown(); stopTestSound(); });
+  on('test-voice', function () { A.testVoice(); stopTestSound(); });
   on('test-halfway', function () { A.testHalfway(); stopTestSound(); });
   on('export', openExport);
   on('import', openImport);
@@ -228,7 +250,7 @@
     if (el) ui.dispatch(el, e);
   });
   doc.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' && ui.isOverlayOpen()) { ui.closeOverlay(); return; }
+    if (e.key === 'Escape' && ui.isOverlayOpen() && !ui.isOverlaySticky()) { ui.closeOverlay(); return; }
     var t = e.target;
     if ((e.key === 'Enter' || e.key === ' ') && t.getAttribute && t.getAttribute('role') === 'button') {
       e.preventDefault();
@@ -262,6 +284,7 @@
     }
   });
 
+  IT.openSettings = openSettings;
   g.addEventListener('hashchange', route);
 
   S.migrateOnce();

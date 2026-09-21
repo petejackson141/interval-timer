@@ -36,6 +36,7 @@
   function unlock() {
     try { if (g.navigator.audioSession) g.navigator.audioSession.type = 'playback'; } catch (e) { /* ignore */ }
     ensureCtx();
+    if (IT.voice) IT.voice.prepare();
     try {
       if (!silentEl) {
         silentEl = new Audio(makeSilentWav());
@@ -92,13 +93,59 @@
     }
   }
 
+  // Phones don't say which voices are male or female, so match well-known names.
+  var FEMALE = ['samantha', 'nicky', 'karen', 'moira', 'tessa', 'allison', 'ava', 'susan', 'victoria', 'kate', 'serena', 'fiona', 'zoe', 'joelle', 'martha', 'catherine', 'microsoft zira', 'google us english', 'google uk english female'];
+  var MALE = ['aaron', 'alex', 'fred', 'daniel', 'rishi', 'gordon', 'arthur', 'oliver', 'lee', 'evan', 'tom', 'reed', 'ralph', 'eddy', 'microsoft david', 'microsoft mark', 'google uk english male'];
+
+  function pickVoice(kind) {
+    var vs;
+    try { vs = g.speechSynthesis.getVoices() || []; } catch (e) { return null; }
+    var en = vs.filter(function (v) { return /^en([-_]|$)/i.test(v.lang); });
+    var names = kind === 'male' ? MALE : FEMALE;
+    for (var i = 0; i < names.length; i++) {
+      var hits = en.filter(function (v) { return v.name.toLowerCase().indexOf(names[i]) === 0; });
+      if (hits.length) {
+        var us = hits.filter(function (v) { return /en[-_]US/i.test(v.lang); });
+        return us[0] || hits[0];
+      }
+    }
+    return null;
+  }
+
+  // Which system voice is used, in words, for the Settings screen.
+  function voiceInfo() {
+    var s = IT.store.settings();
+    if (s.voiceType === 'mine') {
+      var st = IT.voice ? IT.voice.status() : { have: 0, total: 9 };
+      return st.have ? st.have + ' of ' + st.total + ' phrases recorded. Anything not recorded uses the female voice.' : 'No phrases recorded yet.';
+    }
+    var v = pickVoice(s.voiceType);
+    if (v) return 'Using the “' + v.name.replace(/\s*\(.*\)\s*$/, '') + '” voice on this phone.';
+    return s.voiceType === 'male'
+      ? 'No male voice found on this phone, so this is a deeper version of the default voice.'
+      : 'Using the phone’s default voice.';
+  }
+  try {
+    if ('speechSynthesis' in g) {
+      g.speechSynthesis.getVoices(); // kicks off loading on iOS
+      g.speechSynthesis.addEventListener('voiceschanged', function () {
+        var el = g.document.getElementById('voice-info');
+        if (el) el.textContent = voiceInfo();
+      });
+    }
+  } catch (e) { /* ignore */ }
+
+  // Synthesised speech in the chosen male / female voice.
   // Returns false when the browser has no speech, so callers can fall back to a beep.
   function say(text, opts) {
     try {
       if (!('speechSynthesis' in g)) return false;
+      var kind = IT.store.settings().voiceType === 'male' ? 'male' : 'female';
       g.speechSynthesis.cancel();
       var u = new SpeechSynthesisUtterance(text);
-      u.lang = 'en-US';
+      var v = pickVoice(kind);
+      if (v) { u.voice = v; u.lang = v.lang; }
+      else { u.lang = 'en-US'; if (kind === 'male') u.pitch = 0.7; }
       u.volume = opts && opts.volume != null ? opts.volume : 0.8;
       u.rate = (opts && opts.rate) || 1.05;
       g.speechSynthesis.speak(u);
@@ -106,11 +153,18 @@
     } catch (e) { return false; }
   }
 
+  // Say a phrase in whichever voice is chosen: my own recording if there is one
+  // for this phrase, otherwise the synthesised voice.
+  function speak(key, text, volume) {
+    if (IT.store.settings().voiceType === 'mine' && IT.voice && IT.voice.play(key, volume)) return true;
+    return say(text, { volume: volume });
+  }
+
   // The last-three-seconds call: 3 beeps, spoken 3-2-1, or nothing.
   function countdown(n) {
     var s = IT.store.settings();
     if (s.countdown === 'off') return;
-    if (s.countdown === 'voice' && say(String(n), { volume: s.volume })) return;
+    if (s.countdown === 'voice' && speak('n' + n, String(n), s.volume)) return;
     tone(880, 0, 0.14, 0.4 * s.volume);
   }
 
@@ -118,7 +172,7 @@
   function halfway() {
     var s = IT.store.settings();
     if (s.half === 'off') return;
-    if (s.half === 'voice' && say('Half way there', { volume: s.halfVolume })) return;
+    if (s.half === 'voice' && speak('half', 'Half way there', s.halfVolume)) return;
     tone(1175, 0, 0.3, 0.45 * s.halfVolume);
   }
 
@@ -134,9 +188,18 @@
     halfway();
   }
   // Spoken section names ("Work", "Rest", ...) when that setting is on.
-  function announce(text) {
+  function announce(key, text) {
     var s = IT.store.settings();
-    if (s.names) say(text, { volume: s.namesVolume });
+    if (s.names) speak(key, text, s.namesVolume);
+  }
+
+  // Settings-screen sample of the chosen voice, whatever the countdown mode is.
+  function testVoice() {
+    unlock();
+    var s = IT.store.settings();
+    speak('n3', '3', s.volume);
+    setTimeout(function () { speak('n2', '2', s.volume); }, 1000);
+    setTimeout(function () { speak('n1', '1', s.volume); }, 2000);
   }
 
   // Slider previews: one sample of whatever that slider controls.
@@ -144,10 +207,10 @@
     unlock();
     if (key === 'halfVolume') halfway();
     else if (key === 'cueVolume') cue('work');
-    else if (key === 'namesVolume') announce('Work');
+    else if (key === 'namesVolume') announce('work', 'Work');
     else countdown(3);
   }
 
-  IT.audio = { unlock: unlock, suspend: suspend, cue: cue, say: say, countdown: countdown, halfway: halfway, announce: announce,
+  IT.audio = { unlock: unlock, suspend: suspend, cue: cue, say: say, countdown: countdown, halfway: halfway, announce: announce, testVoice: testVoice, voiceInfo: voiceInfo, context: ensureCtx,
     testCountdown: testCountdown, testHalfway: testHalfway, preview: preview };
 })(self);
