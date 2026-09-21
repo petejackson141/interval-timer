@@ -77,15 +77,18 @@
   }
 
   // A short, distinct sound for the start of each kind of section.
+  // Levels were tuned at a 70% slider, so scale around that.
   function cue(type) {
-    if (!IT.store.settings().beep) return;
+    var s = IT.store.settings();
+    if (!s.beep) return;
+    var k = s.cueVolume / 0.7;
     switch (type) {
-      case 'work':     tone(880, 0, 0.16, 0.22); tone(1175, 0.18, 0.22, 0.22); break;
-      case 'rest':     tone(523, 0, 0.32, 0.2); break;
-      case 'getready': tone(660, 0, 0.2, 0.2); break;
-      case 'reset':    tone(587, 0, 0.16, 0.2); tone(440, 0.18, 0.28, 0.2); break;
-      case 'finish':   tone(659, 0, 0.18, 0.22); tone(784, 0.2, 0.18, 0.22); tone(1047, 0.4, 0.4, 0.22); break;
-      default:         tone(660, 0, 0.2, 0.2);
+      case 'work':     tone(880, 0, 0.16, 0.22 * k); tone(1175, 0.18, 0.22, 0.22 * k); break;
+      case 'rest':     tone(523, 0, 0.32, 0.2 * k); break;
+      case 'getready': tone(660, 0, 0.2, 0.2 * k); break;
+      case 'reset':    tone(587, 0, 0.16, 0.2 * k); tone(440, 0.18, 0.28, 0.2 * k); break;
+      case 'finish':   tone(659, 0, 0.18, 0.22 * k); tone(784, 0.2, 0.18, 0.22 * k); tone(1047, 0.4, 0.4, 0.22 * k); break;
+      default:         tone(660, 0, 0.2, 0.2 * k);
     }
   }
 
@@ -115,8 +118,8 @@
   function halfway() {
     var s = IT.store.settings();
     if (s.half === 'off') return;
-    if (s.half === 'voice' && say('Half way there', { volume: s.volume })) return;
-    tone(1175, 0, 0.3, 0.45 * s.volume);
+    if (s.half === 'voice' && say('Half way there', { volume: s.halfVolume })) return;
+    tone(1175, 0, 0.3, 0.45 * s.halfVolume);
   }
 
   // Settings-screen previews (each is started by a tap, which unlocks audio).
@@ -130,11 +133,21 @@
     unlock();
     halfway();
   }
-  function preview() {
-    unlock();
-    countdown(3);
+  // Spoken section names ("Work", "Rest", ...) when that setting is on.
+  function announce(text) {
+    var s = IT.store.settings();
+    if (s.names) say(text, { volume: s.namesVolume });
   }
 
-  IT.audio = { unlock: unlock, suspend: suspend, cue: cue, say: say, countdown: countdown, halfway: halfway,
+  // Slider previews: one sample of whatever that slider controls.
+  function preview(key) {
+    unlock();
+    if (key === 'halfVolume') halfway();
+    else if (key === 'cueVolume') cue('work');
+    else if (key === 'namesVolume') announce('Work');
+    else countdown(3);
+  }
+
+  IT.audio = { unlock: unlock, suspend: suspend, cue: cue, say: say, countdown: countdown, halfway: halfway, announce: announce,
     testCountdown: testCountdown, testHalfway: testHalfway, preview: preview };
 })(self);

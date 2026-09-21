@@ -8,7 +8,8 @@
   var K_WORKOUTS = 'intervaltimer:workouts';
   var K_SETTINGS = 'intervaltimer:settings';
   var K_SEEDED = 'intervaltimer:seeded';
-  var DEFAULTS = { countdown: 'voice', volume: 0.7, half: 'voice', names: false, beep: true, wake: true };
+  var DEFAULTS = { countdown: 'voice', volume: 0.7, half: 'voice', halfVolume: 0.7, beep: true, cueVolume: 0.7, names: false, namesVolume: 0.7, wake: true };
+  var VOLUMES = ['volume', 'halfVolume', 'cueVolume', 'namesVolume']; // one slider per sound setting
   var CHOICES = { countdown: ['beeps', 'voice', 'off'], half: ['voice', 'beep', 'off'] };
 
   var memory = {}; // fallback if localStorage is unavailable
@@ -79,7 +80,7 @@
     Object.keys(DEFAULTS).forEach(function (k) {
       var d = DEFAULTS[k], v = s[k];
       if (CHOICES[k]) out[k] = CHOICES[k].indexOf(v) >= 0 ? v : d;
-      else if (k === 'volume') out[k] = typeof v === 'number' && isFinite(v) ? Math.min(1, Math.max(0.05, v)) : d;
+      else if (VOLUMES.indexOf(k) >= 0) out[k] = typeof v === 'number' && isFinite(v) ? Math.min(1, Math.max(0.05, v)) : d;
       else out[k] = typeof v === 'boolean' ? v : d;
     });
     // version 1 had a single "voice countdown" switch
@@ -89,7 +90,7 @@
   function setSetting(key, value) {
     var s = settings();
     if (CHOICES[key]) s[key] = CHOICES[key].indexOf(value) >= 0 ? value : DEFAULTS[key];
-    else if (key === 'volume') s[key] = Math.min(1, Math.max(0.05, Number(value) || DEFAULTS.volume));
+    else if (VOLUMES.indexOf(key) >= 0) s[key] = Math.min(1, Math.max(0.05, Number(value) || DEFAULTS.volume));
     else s[key] = !!value;
     write(K_SETTINGS, s);
   }

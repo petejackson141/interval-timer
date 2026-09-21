@@ -51,43 +51,51 @@
     }).join('') + '</div>';
   }
 
+  // One volume slider per sound setting; it dims while that sound is switched off.
+  function setSlider(key, forKey, label) {
+    var st = S.settings();
+    var pct = Math.round(st[key] * 100);
+    var off = st[forKey] === 'off' || st[forKey] === false;
+    return '<div class="slider' + (off ? ' off' : '') + '" data-for="' + forKey + '"><span class="k">' + label + '</span>' +
+      '<input type="range" min="5" max="100" step="5" value="' + pct + '" data-range="' + key + '" style="--p:' + pct + '%" aria-label="' + label + '">' +
+      '<output>' + pct + '%</output></div>';
+  }
+
   function openSettings() {
-    var s = S.settings();
-    var pct = Math.round(s.volume * 100);
     ui.sheet(
-      '<h2 class=\"sheet-title\">Settings</h2>' +
+      '<h2 class="sheet-title">Settings</h2>' +
 
-      '<section class=\"setsec\"><h3>Countdown</h3>' +
-        '<p class=\"setdesc\">Plays in the last 3 seconds of every section: three beeps, or a spoken 3, 2, 1.</p>' +
+      '<section class="setsec"><h3>Countdown</h3>' +
+        '<p class="setdesc">Plays in the last 3 seconds of every section: three beeps, or a spoken 3, 2, 1.</p>' +
         setSeg('countdown', [['beeps', '3 beeps'], ['voice', 'Voice'], ['off', 'Muted']]) +
-        '<div class=\"slider\"><span class=\"k\">Volume</span>' +
-          '<input type=\"range\" min=\"5\" max=\"100\" step=\"5\" value=\"' + pct + '\" data-range=\"volume\" style=\"--p:' + pct + '%\" aria-label=\"Countdown volume\">' +
-          '<output id=\"vol-out\">' + pct + '%</output></div>' +
-        '<p class=\"setdesc\">Also sets the volume of the halfway call.</p>' +
-        '<button class=\"btn ghost wide\" data-act=\"test-countdown\">Test countdown</button>' +
+        setSlider('volume', 'countdown', 'Volume') +
+        '<button class="btn ghost wide" data-act="test-countdown">Test countdown</button>' +
       '</section>' +
 
-      '<section class=\"setsec\"><h3>Halfway call</h3>' +
-        '<p class=\"setdesc\">Halfway through each Work interval (10 seconds or longer). Voice says “Half way there”.</p>' +
+      '<section class="setsec"><h3>Halfway call</h3>' +
+        '<p class="setdesc">Halfway through each Work interval (10 seconds or longer). Voice says “Half way there”.</p>' +
         setSeg('half', [['voice', 'Voice'], ['beep', 'Beep'], ['off', 'Muted']]) +
-        '<button class=\"btn ghost wide\" data-act=\"test-halfway\">Test halfway call</button>' +
+        setSlider('halfVolume', 'half', 'Volume') +
+        '<button class="btn ghost wide" data-act="test-halfway">Test halfway call</button>' +
       '</section>' +
 
-      '<section class=\"setsec\"><h3>Section sounds</h3>' +
+      '<section class="setsec"><h3>Section sounds</h3>' +
         setSwitch('beep', 'Sound cues', 'A short tone when a section starts') +
+        setSlider('cueVolume', 'beep', 'Volume') +
         setSwitch('names', 'Say section names', 'Announces Work, Rest and so on') +
+        setSlider('namesVolume', 'names', 'Volume') +
       '</section>' +
 
-      '<section class=\"setsec\"><h3>Screen</h3>' +
+      '<section class="setsec"><h3>Screen</h3>' +
         setSwitch('wake', 'Keep screen on', 'Stops the phone locking mid-workout') +
       '</section>' +
 
-      '<section class=\"setsec\"><h3>Library backup</h3>' +
-        '<div class=\"setbtns\"><button class=\"btn ghost\" data-act=\"export\">Export library</button>' +
-        '<button class=\"btn ghost\" data-act=\"import\">Import library</button></div>' +
+      '<section class="setsec"><h3>Library backup</h3>' +
+        '<div class="setbtns"><button class="btn ghost" data-act="export">Export library</button>' +
+        '<button class="btn ghost" data-act="import">Import library</button></div>' +
       '</section>' +
 
-      '<p class=\"version\">Version ' + IT.VERSION + '</p>'
+      '<p class="version">Version ' + IT.VERSION + '</p>'
     );
   }
 
@@ -170,8 +178,13 @@
   on('b-del', function () { b.remove(); });
   on('b-starter', function () { b.starter(); });
 
+  function dimSlider(key, off) {
+    var sl = doc.querySelector('.slider[data-for="' + key + '"]');
+    if (sl) sl.classList.toggle('off', off);
+  }
   on('set-choice', function (el) {
     S.setSetting(el.getAttribute('data-key'), el.getAttribute('data-val'));
+    dimSlider(el.getAttribute('data-key'), el.getAttribute('data-val') === 'off');
     var sibs = el.parentNode.querySelectorAll('button');
     for (var i = 0; i < sibs.length; i++) {
       var on = sibs[i] === el;
@@ -232,15 +245,15 @@
       var pct = parseInt(t.value, 10);
       S.setSetting(t.getAttribute('data-range'), pct / 100);
       t.style.setProperty('--p', pct + '%');
-      var out = doc.getElementById('vol-out');
+      var out = t.parentNode.querySelector('output');
       if (out) out.textContent = pct + '%';
     }
   });
   doc.addEventListener('change', function (e) {
     var t = e.target;
     if (t.id === 'b-val') b.typedDone(t);
-    else if (t.getAttribute && t.getAttribute('data-range')) { A.preview(); if (!IT.player.isRunning()) setTimeout(A.suspend, 1500); }
-    else if (t.getAttribute && t.getAttribute('data-set')) S.setSetting(t.getAttribute('data-set'), t.checked);
+    else if (t.getAttribute && t.getAttribute('data-range')) { A.preview(t.getAttribute('data-range')); if (!IT.player.isRunning()) setTimeout(A.suspend, 3000); }
+    else if (t.getAttribute && t.getAttribute('data-set')) { S.setSetting(t.getAttribute('data-set'), t.checked); dimSlider(t.getAttribute('data-set'), !t.checked); }
   });
   doc.addEventListener('focusin', function (e) {
     if (e.target.classList && e.target.classList.contains('num')) {
