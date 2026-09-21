@@ -68,7 +68,7 @@
     o.type = 'sine';
     o.frequency.value = freq;
     gn.gain.setValueAtTime(0.0001, t);
-    gn.gain.exponentialRampToValueAtTime(gain, t + 0.015);
+    gn.gain.exponentialRampToValueAtTime(Math.max(0.0005, gain), t + 0.015);
     gn.gain.exponentialRampToValueAtTime(0.0001, t + dur);
     o.connect(gn);
     gn.connect(c.destination);
@@ -89,17 +89,52 @@
     }
   }
 
+  // Returns false when the browser has no speech, so callers can fall back to a beep.
   function say(text, opts) {
     try {
-      if (!('speechSynthesis' in g)) return;
+      if (!('speechSynthesis' in g)) return false;
       g.speechSynthesis.cancel();
       var u = new SpeechSynthesisUtterance(text);
       u.lang = 'en-US';
-      u.volume = (opts && opts.volume) || 0.8;
+      u.volume = opts && opts.volume != null ? opts.volume : 0.8;
       u.rate = (opts && opts.rate) || 1.05;
       g.speechSynthesis.speak(u);
-    } catch (e) { /* ignore */ }
+      return true;
+    } catch (e) { return false; }
   }
 
-  IT.audio = { unlock: unlock, suspend: suspend, cue: cue, say: say };
+  // The last-three-seconds call: 3 beeps, spoken 3-2-1, or nothing.
+  function countdown(n) {
+    var s = IT.store.settings();
+    if (s.countdown === 'off') return;
+    if (s.countdown === 'voice' && say(String(n), { volume: s.volume })) return;
+    tone(880, 0, 0.14, 0.4 * s.volume);
+  }
+
+  // The halfway call inside a Work interval: spoken, a single beep, or nothing.
+  function halfway() {
+    var s = IT.store.settings();
+    if (s.half === 'off') return;
+    if (s.half === 'voice' && say('Half way there', { volume: s.volume })) return;
+    tone(1175, 0, 0.3, 0.45 * s.volume);
+  }
+
+  // Settings-screen previews (each is started by a tap, which unlocks audio).
+  function testCountdown() {
+    unlock();
+    countdown(3);
+    setTimeout(function () { countdown(2); }, 1000);
+    setTimeout(function () { countdown(1); }, 2000);
+  }
+  function testHalfway() {
+    unlock();
+    halfway();
+  }
+  function preview() {
+    unlock();
+    countdown(3);
+  }
+
+  IT.audio = { unlock: unlock, suspend: suspend, cue: cue, say: say, countdown: countdown, halfway: halfway,
+    testCountdown: testCountdown, testHalfway: testHalfway, preview: preview };
 })(self);

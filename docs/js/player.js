@@ -13,15 +13,14 @@
   };
 
   function roTree(items) {
+    var info = M.analyze(items);
     return items.map(function (it) {
       var T = M.TYPES[it.type];
-      if (T.kind === 'count') {
-        return '<section class="group t-' + it.type + '">' +
-          '<div class="row">' + ui.tIcon(it.type) + '<span class="lbl">' + T.label + '</span><span class="val">' + it.value + 'X</span></div>' +
-          '<div class="kids">' + roTree(it.children || []) + '</div></section>';
-      }
-      return '<div class="leaf t-' + it.type + '" data-id="' + it.id + '">' +
-        '<div class="row">' + ui.tIcon(it.type) + '<span class="lbl">' + T.label + '</span><span class="val">' + M.fmt(it.value) + '</span></div></div>';
+      var cv = info.cover[it.id] || {};
+      var val = T.kind === 'count' ? it.value + 'X' : M.fmt(it.value);
+      return '<div class="leaf t-' + it.type + (cv.ex ? ' cov-ex' : '') + (cv.rd ? ' cov-rd' : '') + '"' +
+        (T.kind === 'time' ? ' data-id="' + it.id + '"' : '') + '>' +
+        '<div class="row">' + ui.tIcon(it.type) + '<span class="lbl">' + T.label + '</span><span class="val">' + val + '</span></div></div>';
     }).join('');
   }
 
@@ -30,7 +29,7 @@
     if (!w) { location.hash = '#/'; return; }
     P = {
       w: w, exp: M.expand(w), idx: 0, acc: 0, runStart: 0, status: 'idle',
-      timer: null, lastR: null, showElapsed: false, wake: null, subKey: null, els: {}
+      timer: null, lastR: null, halfIdx: -1, showElapsed: false, wake: null, subKey: null, els: {}
     };
     render();
   }
@@ -60,7 +59,7 @@
             '<button class="playbtn" id="p-play" data-act="p-play"></button>' +
             '<button class="skip next" id="p-next" data-act="p-next" aria-label="Next section" hidden>' + ui.icon('next') + '</button>' +
           '</div>' +
-          '<div class="rows" id="p-rows">' + roTree(w.items) + '</div>' +
+          '<div class="rows gut" id="p-rows">' + roTree(w.items) + '</div>' +
         '</div>' +
       '</div>'
     );
@@ -202,7 +201,16 @@
     var r = Math.max(1, Math.ceil(seg.end - t - 0.001));
     if (r !== P.lastR) {
       P.lastR = r;
-      if (r <= 3 && seg.seconds > 3 && S.settings().voice) A.say(String(r), { volume: 0.7 });
+      if (r <= 3 && seg.seconds > 3) A.countdown(r);
+    }
+    // Halfway through a Work interval (10s or longer). Skipped if the phone was
+    // stalled and we only notice after the moment has passed.
+    if (seg.type === 'work' && seg.seconds >= 10 && P.halfIdx !== P.idx) {
+      var into = t - seg.start;
+      if (into >= seg.seconds / 2) {
+        P.halfIdx = P.idx;
+        if (into < seg.seconds - 4) A.halfway();
+      }
     }
     paint();
   }
@@ -210,7 +218,7 @@
   function start() {
     if (!P.exp.segments.length) return;
     A.unlock();
-    P.idx = 0; P.acc = 0; P.lastR = null;
+    P.idx = 0; P.acc = 0; P.lastR = null; P.halfIdx = -1;
     P.status = 'running'; P.runStart = Date.now();
     acquireWake();
     segmentStart();
@@ -252,13 +260,13 @@
   function reset() {
     if (!P) return;
     stopTimer(); releaseWake(); A.suspend();
-    P.status = 'idle'; P.acc = 0; P.idx = 0; P.lastR = null;
+    P.status = 'idle'; P.acc = 0; P.idx = 0; P.lastR = null; P.halfIdx = -1;
     renderState();
   }
 
   function seek(i) {
     var segs = P.exp.segments;
-    P.idx = i; P.acc = segs[i].start * 1000; P.lastR = null;
+    P.idx = i; P.acc = segs[i].start * 1000; P.lastR = null; P.halfIdx = -1;
     if (P.status === 'running') { P.runStart = Date.now(); segmentStart(); }
     renderState();
   }

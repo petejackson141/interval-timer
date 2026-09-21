@@ -8,7 +8,8 @@
   var K_WORKOUTS = 'intervaltimer:workouts';
   var K_SETTINGS = 'intervaltimer:settings';
   var K_SEEDED = 'intervaltimer:seeded';
-  var DEFAULTS = { voice: true, names: false, beep: true, wake: true };
+  var DEFAULTS = { countdown: 'voice', volume: 0.7, half: 'voice', names: false, beep: true, wake: true };
+  var CHOICES = { countdown: ['beeps', 'voice', 'off'], half: ['voice', 'beep', 'off'] };
 
   var memory = {}; // fallback if localStorage is unavailable
 
@@ -29,6 +30,14 @@
   function all() {
     var list = read(K_WORKOUTS, []);
     return Array.isArray(list) ? list : [];
+  }
+
+  // Version 1 saved Exercises / Rounds as containers; flatten those once.
+  function migrateOnce() {
+    var list = all();
+    var changed = false;
+    list.forEach(function (w) { if (M.needsUpgrade(w)) { M.upgrade(w); changed = true; } });
+    if (changed) write(K_WORKOUTS, list);
   }
 
   function seedOnce() {
@@ -65,14 +74,23 @@
   }
 
   function settings() {
-    var s = read(K_SETTINGS, {});
+    var s = read(K_SETTINGS, {}) || {};
     var out = {};
-    Object.keys(DEFAULTS).forEach(function (k) { out[k] = typeof s[k] === 'boolean' ? s[k] : DEFAULTS[k]; });
+    Object.keys(DEFAULTS).forEach(function (k) {
+      var d = DEFAULTS[k], v = s[k];
+      if (CHOICES[k]) out[k] = CHOICES[k].indexOf(v) >= 0 ? v : d;
+      else if (k === 'volume') out[k] = typeof v === 'number' && isFinite(v) ? Math.min(1, Math.max(0.05, v)) : d;
+      else out[k] = typeof v === 'boolean' ? v : d;
+    });
+    // version 1 had a single "voice countdown" switch
+    if (CHOICES.countdown.indexOf(s.countdown) < 0 && s.voice === false) out.countdown = 'off';
     return out;
   }
   function setSetting(key, value) {
     var s = settings();
-    s[key] = !!value;
+    if (CHOICES[key]) s[key] = CHOICES[key].indexOf(value) >= 0 ? value : DEFAULTS[key];
+    else if (key === 'volume') s[key] = Math.min(1, Math.max(0.05, Number(value) || DEFAULTS.volume));
+    else s[key] = !!value;
     write(K_SETTINGS, s);
   }
 
@@ -88,6 +106,7 @@
     var n = 0;
     incoming.forEach(function (w) {
       if (!w || typeof w.name !== 'string' || !Array.isArray(w.items)) return;
+      M.upgrade(w);
       if (M.expand(w).segments.length === 0) return;
       w.id = w.id || M.uid();
       w.updatedAt = w.updatedAt || Date.now();
@@ -100,7 +119,7 @@
   }
 
   IT.store = {
-    seedOnce: seedOnce, list: list, get: get, save: save, remove: remove, duplicate: duplicate,
+    migrateOnce: migrateOnce, seedOnce: seedOnce, list: list, get: get, save: save, remove: remove, duplicate: duplicate,
     settings: settings, setSetting: setSetting, exportJSON: exportJSON, importJSON: importJSON
   };
 })(self);

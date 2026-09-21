@@ -38,22 +38,56 @@
     );
   }
 
+  function setSwitch(key, title, desc) {
+    var s = S.settings();
+    return '<label class=\"setrow\"><span><b>' + title + '</b><small>' + desc + '</small></span>' +
+      '<span class=\"switch\"><input type=\"checkbox\" data-set=\"' + key + '\"' + (s[key] ? ' checked' : '') + '><i></i></span></label>';
+  }
+  function setSeg(key, options) {
+    var cur = S.settings()[key];
+    return '<div class=\"seg\" role=\"group\">' + options.map(function (o) {
+      var on = o[0] === cur;
+      return '<button type=\"button\" class=\"' + (on ? 'on' : '') + '\" aria-pressed=\"' + on + '\" data-act=\"set-choice\" data-key=\"' + key + '\" data-val=\"' + o[0] + '\">' + o[1] + '</button>';
+    }).join('') + '</div>';
+  }
+
   function openSettings() {
     var s = S.settings();
-    function sw(key, title, desc) {
-      return '<label class="setrow"><span><b>' + title + '</b><small>' + desc + '</small></span>' +
-        '<span class="switch"><input type="checkbox" data-set="' + key + '"' + (s[key] ? ' checked' : '') + '><i></i></span></label>';
-    }
+    var pct = Math.round(s.volume * 100);
     ui.sheet(
-      '<h2 class="sheet-title">Settings</h2>' +
-      sw('voice', 'Voice countdown', 'Says 3, 2, 1 at the end of each section') +
-      sw('names', 'Say section names', 'Announces Work, Rest and so on') +
-      sw('beep', 'Sound cues', 'A short tone when a section starts') +
-      sw('wake', 'Keep screen on', 'Stops the phone locking mid-workout') +
-      '<button class="btn ghost wide" data-act="test-sound">Test sound and voice</button>' +
-      '<div class="setbtns"><button class="btn ghost" data-act="export">Export library</button>' +
-      '<button class="btn ghost" data-act="import">Import library</button></div>' +
-      '<p class="version">Version ' + IT.VERSION + '</p>'
+      '<h2 class=\"sheet-title\">Settings</h2>' +
+
+      '<section class=\"setsec\"><h3>Countdown</h3>' +
+        '<p class=\"setdesc\">Plays in the last 3 seconds of every section: three beeps, or a spoken 3, 2, 1.</p>' +
+        setSeg('countdown', [['beeps', '3 beeps'], ['voice', 'Voice'], ['off', 'Muted']]) +
+        '<div class=\"slider\"><span class=\"k\">Volume</span>' +
+          '<input type=\"range\" min=\"5\" max=\"100\" step=\"5\" value=\"' + pct + '\" data-range=\"volume\" style=\"--p:' + pct + '%\" aria-label=\"Countdown volume\">' +
+          '<output id=\"vol-out\">' + pct + '%</output></div>' +
+        '<p class=\"setdesc\">Also sets the volume of the halfway call.</p>' +
+        '<button class=\"btn ghost wide\" data-act=\"test-countdown\">Test countdown</button>' +
+      '</section>' +
+
+      '<section class=\"setsec\"><h3>Halfway call</h3>' +
+        '<p class=\"setdesc\">Halfway through each Work interval (10 seconds or longer). Voice says “Half way there”.</p>' +
+        setSeg('half', [['voice', 'Voice'], ['beep', 'Beep'], ['off', 'Muted']]) +
+        '<button class=\"btn ghost wide\" data-act=\"test-halfway\">Test halfway call</button>' +
+      '</section>' +
+
+      '<section class=\"setsec\"><h3>Section sounds</h3>' +
+        setSwitch('beep', 'Sound cues', 'A short tone when a section starts') +
+        setSwitch('names', 'Say section names', 'Announces Work, Rest and so on') +
+      '</section>' +
+
+      '<section class=\"setsec\"><h3>Screen</h3>' +
+        setSwitch('wake', 'Keep screen on', 'Stops the phone locking mid-workout') +
+      '</section>' +
+
+      '<section class=\"setsec\"><h3>Library backup</h3>' +
+        '<div class=\"setbtns\"><button class=\"btn ghost\" data-act=\"export\">Export library</button>' +
+        '<button class=\"btn ghost\" data-act=\"import\">Import library</button></div>' +
+      '</section>' +
+
+      '<p class=\"version\">Version ' + IT.VERSION + '</p>'
     );
   }
 
@@ -127,7 +161,8 @@
   on('b-save', function () { b.save(); });
   on('b-select', function (el) { b.select(el.getAttribute('data-id')); });
   on('b-step', function (el) { b.step(parseInt(el.getAttribute('data-d'), 10)); });
-  on('b-add', function (el) { b.openPicker(el.getAttribute('data-parent')); });
+  on('b-add', function (el) { b.openPicker(el.getAttribute('data-after')); });
+  on('b-addbelow', function () { b.addBelow(); });
   on('b-pick', function (el) { b.pick(el.getAttribute('data-type')); });
   on('b-up', function () { b.move(-1); });
   on('b-down', function () { b.move(1); });
@@ -135,12 +170,20 @@
   on('b-del', function () { b.remove(); });
   on('b-starter', function () { b.starter(); });
 
-  on('test-sound', function () {
-    A.unlock();
-    A.cue('work');
-    setTimeout(function () { A.say('3, 2, 1', { volume: 0.8 }); }, 500);
-    setTimeout(function () { if (!IT.player.isRunning()) A.suspend(); }, 4500);
+  on('set-choice', function (el) {
+    S.setSetting(el.getAttribute('data-key'), el.getAttribute('data-val'));
+    var sibs = el.parentNode.querySelectorAll('button');
+    for (var i = 0; i < sibs.length; i++) {
+      var on = sibs[i] === el;
+      sibs[i].classList.toggle('on', on);
+      sibs[i].setAttribute('aria-pressed', on ? 'true' : 'false');
+    }
   });
+  function stopTestSound() {
+    setTimeout(function () { if (!IT.player.isRunning()) A.suspend(); }, 3500);
+  }
+  on('test-countdown', function () { A.testCountdown(); stopTestSound(); });
+  on('test-halfway', function () { A.testHalfway(); stopTestSound(); });
   on('export', openExport);
   on('import', openImport);
   on('copy-export', function () {
@@ -185,10 +228,18 @@
     var t = e.target;
     if (t.id === 'b-name') b.setName(t.value);
     else if (t.id === 'b-val') b.typed(t);
+    else if (t.getAttribute && t.getAttribute('data-range')) {
+      var pct = parseInt(t.value, 10);
+      S.setSetting(t.getAttribute('data-range'), pct / 100);
+      t.style.setProperty('--p', pct + '%');
+      var out = doc.getElementById('vol-out');
+      if (out) out.textContent = pct + '%';
+    }
   });
   doc.addEventListener('change', function (e) {
     var t = e.target;
     if (t.id === 'b-val') b.typedDone(t);
+    else if (t.getAttribute && t.getAttribute('data-range')) { A.preview(); if (!IT.player.isRunning()) setTimeout(A.suspend, 1500); }
     else if (t.getAttribute && t.getAttribute('data-set')) S.setSetting(t.getAttribute('data-set'), t.checked);
   });
   doc.addEventListener('focusin', function (e) {
@@ -200,6 +251,7 @@
 
   g.addEventListener('hashchange', route);
 
+  S.migrateOnce();
   S.seedOnce();
   route();
 
