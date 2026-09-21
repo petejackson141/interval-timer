@@ -534,3 +534,5 @@ button:focus-visible, [role="button"]:focus-visible { outline: 3px solid #2B5BFF
 @keyframes rec-pulse { 50% { box-shadow: 0 0 0 14px rgba(240, 19, 77, .28), 0 10px 22px rgba(0, 0, 0, .16); } }
 #myvoice { margin-top: 8px; }
 #myvoice .setbtns .btn { min-height: 52px; }
+
+.version strong { display: block; margin-top: 2px; color: var(--ink); font-size: 18px; font-weight: 800; }

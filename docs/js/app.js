@@ -114,7 +114,7 @@
         '<button class="btn ghost" data-act="import">Import library</button></div>' +
       '</section>' +
 
-      '<p class="version">Version ' + IT.VERSION + '</p>'
+      '<p class="version">Version ' + IT.VERSION + '<strong>' + IT.RELEASE + '</strong></p>'
     );
   }
 
