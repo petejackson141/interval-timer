@@ -143,6 +143,7 @@
   }
   function stopStream() {
     if (R.stream) { R.stream.getTracks().forEach(function (t) { t.stop(); }); R.stream = null; }
+    A.applySession();
   }
 
   function startRec() {

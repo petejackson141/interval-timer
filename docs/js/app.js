@@ -101,6 +101,10 @@
         setSlider('namesVolume', 'names', 'Volume') +
       '</section>' +
 
+      '<section class="setsec"><h3>Music</h3>' +
+        setSwitch('mix', 'Keep music playing', 'Your music keeps playing under the beeps and voice. The phone’s silent switch then mutes these sounds too.') +
+      '</section>' +
+
       '<section class="setsec"><h3>Screen</h3>' +
         setSwitch('wake', 'Keep screen on', 'Stops the phone locking mid-workout') +
       '</section>' +
@@ -275,7 +279,7 @@
     var t = e.target;
     if (t.id === 'b-val') b.typedDone(t);
     else if (t.getAttribute && t.getAttribute('data-range')) { A.preview(t.getAttribute('data-range')); if (!IT.player.isRunning()) setTimeout(A.suspend, 3000); }
-    else if (t.getAttribute && t.getAttribute('data-set')) { S.setSetting(t.getAttribute('data-set'), t.checked); dimSlider(t.getAttribute('data-set'), !t.checked); }
+    else if (t.getAttribute && t.getAttribute('data-set')) { S.setSetting(t.getAttribute('data-set'), t.checked); dimSlider(t.getAttribute('data-set'), !t.checked); if (t.getAttribute('data-set') === 'mix') A.applySession(); }
   });
   doc.addEventListener('focusin', function (e) {
     if (e.target.classList && e.target.classList.contains('num')) {

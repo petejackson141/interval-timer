@@ -1,7 +1,11 @@
 // Sound cues and the spoken 3-2-1 countdown.
 // iOS only allows audio after a tap, so unlock() is called from the Start /
-// Resume / Test buttons. It also plays a silent looping clip and asks Safari
-// for a "playback" audio session, which lets sound through the silent switch.
+// Resume / Test buttons.
+// "Keep music playing" (on by default) asks Safari for an "ambient" audio
+// session, so the beeps and voice mix in over whatever music is playing instead
+// of stopping it. The trade-off is that the phone's silent switch mutes them.
+// With it off, a "playback" session plus a silent looping clip lets the sounds
+// through the silent switch, but pauses other apps' music.
 (function (g) {
   'use strict';
   var IT = (g.IT = g.IT || {});
@@ -33,21 +37,44 @@
     return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
   }
 
+  function mixing() { return IT.store.settings().mix; }
+
+  // Choose the audio session. Safe to call any time (also after recording).
+  function applySession() {
+    try { if (g.navigator.audioSession) g.navigator.audioSession.type = mixing() ? 'ambient' : 'playback'; } catch (e) { /* ignore */ }
+    try {
+      if (mixing()) {
+        if (silentEl) silentEl.pause();      // an <audio> clip would stop other apps' music
+      } else if (silentEl && IT.player && IT.player.isRunning()) {
+        var p = silentEl.play();
+        if (p && p.catch) p.catch(function () {});
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  // Does anything need the browser's built-in speech? (Only then does it need waking up.)
+  function usesSystemSpeech() {
+    var s = IT.store.settings();
+    return s.voiceType !== 'mine' && (s.countdown === 'voice' || s.half === 'voice' || s.names);
+  }
+
   function unlock() {
-    try { if (g.navigator.audioSession) g.navigator.audioSession.type = 'playback'; } catch (e) { /* ignore */ }
+    applySession();
     ensureCtx();
     if (IT.voice) IT.voice.prepare();
+    if (!mixing()) {
+      try {
+        if (!silentEl) {
+          silentEl = new Audio(makeSilentWav());
+          silentEl.loop = true;
+          silentEl.setAttribute('playsinline', '');
+        }
+        var p = silentEl.play();
+        if (p && p.catch) p.catch(function () {});
+      } catch (e) { /* ignore */ }
+    }
     try {
-      if (!silentEl) {
-        silentEl = new Audio(makeSilentWav());
-        silentEl.loop = true;
-        silentEl.setAttribute('playsinline', '');
-      }
-      var p = silentEl.play();
-      if (p && p.catch) p.catch(function () {});
-    } catch (e) { /* ignore */ }
-    try {
-      if ('speechSynthesis' in g) {
+      if ('speechSynthesis' in g && usesSystemSpeech()) {
         var u = new SpeechSynthesisUtterance(' ');
         u.volume = 0;
         g.speechSynthesis.speak(u);
@@ -211,6 +238,6 @@
     else countdown(3);
   }
 
-  IT.audio = { unlock: unlock, suspend: suspend, cue: cue, say: say, countdown: countdown, halfway: halfway, announce: announce, testVoice: testVoice, voiceInfo: voiceInfo, context: ensureCtx,
+  IT.audio = { unlock: unlock, suspend: suspend, cue: cue, say: say, countdown: countdown, halfway: halfway, announce: announce, testVoice: testVoice, voiceInfo: voiceInfo, context: ensureCtx, applySession: applySession,
     testCountdown: testCountdown, testHalfway: testHalfway, preview: preview };
 })(self);
