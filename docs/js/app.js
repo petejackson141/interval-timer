@@ -282,7 +282,7 @@
     }).catch(function () { if (manual) ui.toast('Couldn’t check for updates.'); });
   }
   on('check-update', function () { checkUpdate(true); });
-  doc.addEventListener('visibilitychange', function () { if (!doc.hidden) checkUpdate(false); });
+  doc.addEventListener('visibilitychange', function () { if (!doc.hidden) { checkUpdate(false); A.context(); } });
 
   // ----- global listeners -----
   doc.addEventListener('click', function (e) {

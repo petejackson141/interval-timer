@@ -12,15 +12,28 @@
 
   var ctx = null;
   var silentEl = null;
+  // Recording ("My voice") hands the microphone to the OS and, on iPhone, can
+  // leave the shared AudioContext silently broken afterwards even though it still
+  // reports state "running". So the context is thrown away and rebuilt the next
+  // time anything plays after a recording, rather than trusting resume() alone.
+  var micTainted = false;
 
   function ensureCtx() {
+    if (ctx && (ctx.state === 'closed' || micTainted)) {
+      try { ctx.close(); } catch (e) { /* ignore */ }
+      ctx = null;
+      micTainted = false;
+    }
     if (!ctx) {
       var AC = g.AudioContext || g.webkitAudioContext;
       if (AC) { try { ctx = new AC(); } catch (e) { ctx = null; } }
     }
-    if (ctx && ctx.state === 'suspended') { try { ctx.resume(); } catch (e) { /* ignore */ } }
+    if (ctx && ctx.state !== 'running') { try { ctx.resume(); } catch (e) { /* ignore */ } }
     return ctx;
   }
+
+  // Called once a recording session's microphone has been released.
+  function noteMicUsed() { micTainted = true; }
 
   // 0.5 s of 8-bit mono silence as an object URL.
   function makeSilentWav() {
@@ -238,6 +251,6 @@
     else countdown(3);
   }
 
-  IT.audio = { unlock: unlock, suspend: suspend, cue: cue, say: say, countdown: countdown, halfway: halfway, announce: announce, testVoice: testVoice, voiceInfo: voiceInfo, context: ensureCtx, applySession: applySession,
+  IT.audio = { unlock: unlock, suspend: suspend, cue: cue, say: say, countdown: countdown, halfway: halfway, announce: announce, testVoice: testVoice, voiceInfo: voiceInfo, context: ensureCtx, applySession: applySession, noteMicUsed: noteMicUsed,
     testCountdown: testCountdown, testHalfway: testHalfway, preview: preview };
 })(self);

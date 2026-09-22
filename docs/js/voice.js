@@ -198,7 +198,11 @@
     });
   }
   function stopStream() {
-    if (R.stream) { R.stream.getTracks().forEach(function (t) { t.stop(); }); R.stream = null; }
+    if (R.stream) {
+      R.stream.getTracks().forEach(function (t) { t.stop(); });
+      R.stream = null;
+      A.noteMicUsed(); // the mic was used this session; rebuild the AudioContext next play
+    }
     A.applySession();
   }
 
