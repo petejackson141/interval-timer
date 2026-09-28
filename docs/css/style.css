@@ -340,7 +340,7 @@ h1, h2, p { margin: 0; }
 /* ---- overlays ---- */
 #overlay { position: fixed; inset: 0; z-index: 50; display: none; }
 #overlay.on { display: block; }
-.scrim { position: absolute; inset: 0; background: rgba(20, 22, 31, .55); animation: fade .18s ease-out; }
+.scrim { position: absolute; inset: 0; background: rgba(20, 22, 31, .55); animation: fade .18s ease-out; cursor: pointer; }
 .sheet, .drawer, .dialog { position: absolute; background: #fff; color: var(--ink); }
 .sheet {
   left: 0; right: 0; bottom: 0;
@@ -551,3 +551,12 @@ button:focus-visible, [role="button"]:focus-visible { outline: 3px solid #2B5BFF
 .help-list li { margin-bottom: 8px; font-size: 15.5px; font-weight: 500; line-height: 1.4; }
 .help-list li:last-child { margin-bottom: 0; }
 .help-list b { font-weight: 800; }
+
+/* ---- explicit close button on sheets (the reliable way back on iOS,
+   where a tap on the plain scrim div can be unreliable) ---- */
+.sheet-x {
+  position: absolute; top: 14px; right: 14px; z-index: 2;
+  width: 40px; height: 40px; display: grid; place-items: center;
+  border: 0; border-radius: 50%; background: #F1F2F6; color: var(--ink);
+}
+.sheet-x:active { background: #E3E5EC; }

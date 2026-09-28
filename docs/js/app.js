@@ -120,6 +120,54 @@
     );
   }
 
+  function helpSection(title, bodyHTML) {
+    return '<section class="setsec"><h3>' + title + '</h3>' + bodyHTML + '</section>';
+  }
+  function openHelp() {
+    ui.sheet(
+      '<h2 class="sheet-title">How to use Interval Timer</h2>' +
+
+      helpSection('Building a workout',
+        '<p class="setdesc">A workout is a list of sections, in the order they play:</p>' +
+        '<ul class="help-list">' +
+          '<li><b>Get ready</b> — a one-off countdown before the workout starts.</li>' +
+          '<li><b>Work</b> and <b>Rest</b> — the seconds for one exercise and its break.</li>' +
+          '<li><b>Exercises ×N</b> — repeats the sections above it (back to the last repeat count). N is how many exercises are in each set.</li>' +
+          '<li><b>Rounds ×N</b> — repeats everything above it. N is how many sets you do in total.</li>' +
+          '<li><b>Round rest</b> — a longer break, usually placed just before Rounds.</li>' +
+        '</ul>' +
+        '<p class="setdesc">Tap New workout, add sections with the + button, and tap a section to change its seconds or count, reorder it, duplicate it, or delete it. A coloured bracket shows what each Exercises or Rounds repeats. The total time at the top updates as you build. Saved workouts are edited from a card’s <b>⋯</b> menu or the menu’s “Edit this workout”.</p>'
+      ) +
+
+      helpSection('Running a workout',
+        '<p class="setdesc">Tap a workout to open it, then the play button to start. Use the two side buttons to skip to the previous or next section. Tap the pill under the timer to switch between total time left and total time elapsed. The header colour and the outline below always show where you are.</p>'
+      ) +
+
+      helpSection('Sound and voice',
+        '<p class="setdesc">In Settings you can choose:</p>' +
+        '<ul class="help-list">' +
+          '<li><b>Voice</b> — Female, Male, or My voice (your own recordings).</li>' +
+          '<li><b>Countdown</b> — 3 beeps, voice, or muted, for the last 3 seconds of every section.</li>' +
+          '<li><b>Halfway call</b> — plays halfway through a Work interval of 10 seconds or longer.</li>' +
+          '<li><b>Section sounds</b> — a short tone and/or spoken names when a section starts.</li>' +
+        '</ul>' +
+        '<p class="setdesc">Each of these has its own volume slider. “My voice” walks you through recording each phrase; anything you skip uses the Female voice instead.</p>'
+      ) +
+
+      helpSection('Music and the screen',
+        '<p class="setdesc">“Keep music playing” (in Settings → Music) lets the beeps and voice mix in over music from another app. Turning it off plays sound through the silent switch instead, but pauses your music. “Keep screen on” (in Settings → Screen) stops the phone locking mid-workout.</p>'
+      ) +
+
+      helpSection('Backing up your library',
+        '<p class="setdesc">Settings → Library backup saves every workout as one file. On iPhone, choose “Save to Files”, then iCloud Drive (online) or On My iPhone (local). On Android, choose “Save on this phone” for your Downloads folder, or “Save to the cloud” and pick Drive. This backup doesn’t include voice recordings.</p>'
+      ) +
+
+      helpSection('Adding this to your Home Screen',
+        '<p class="setdesc">In Safari, tap the Share button, then “Add to Home Screen”. Opening it from there gives you a full-screen app that also works offline.</p>'
+      )
+    );
+  }
+
   function backupFilename() {
     var d = new Date(), p = function (n) { return String(n).padStart(2, '0'); };
     return 'interval-timer-workouts-' + d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + '.json';

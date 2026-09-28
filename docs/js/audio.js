@@ -4,8 +4,9 @@
 // "Keep music playing" (on by default) asks Safari for an "ambient" audio
 // session, so the beeps and voice mix in over whatever music is playing instead
 // of stopping it. The trade-off is that the phone's silent switch mutes them.
-// With it off, a "playback" session plus a silent looping clip lets the sounds
-// through the silent switch, but pauses other apps' music.
+// With it off, a "playback" session lets the sounds through the silent switch,
+// but pauses other apps' music. See applySession() for why a silent clip runs
+// in both modes.
 (function (g) {
   'use strict';
   var IT = (g.IT = g.IT || {});
@@ -16,12 +17,23 @@
   function mixing() { return IT.store.settings().mix; }
 
   // Choose the audio session. Safe to call any time (also after recording).
+  //
+  // "Keep music playing" asks for the "ambient" category, which is what mixes
+  // with other apps' audio. On some iPhones that category alone doesn't
+  // reliably let AudioContext sound through unless there's also a real
+  // <audio>/<video> element actively playing to anchor it — so a silent looped
+  // clip is now kept running in BOTH modes, not just the non-mixing one. It's
+  // inaudible either way; only the session type below actually changes what
+  // you hear and whether it overrides the silent switch.
   function applySession() {
     try { if (g.navigator.audioSession) g.navigator.audioSession.type = mixing() ? 'ambient' : 'playback'; } catch (e) { /* ignore */ }
     try {
-      if (mixing()) {
-        if (silentEl) silentEl.pause();      // an <audio> clip would stop other apps' music
-      } else if (silentEl && IT.player && IT.player.isRunning()) {
+      if (!silentEl) {
+        silentEl = new Audio(makeSilentWav());
+        silentEl.loop = true;
+        silentEl.setAttribute('playsinline', '');
+      }
+      if (silentEl.paused) {
         var p = silentEl.play();
         if (p && p.catch) p.catch(function () {});
       }
@@ -89,20 +101,8 @@
   }
 
   function unlock() {
-    applySession();
-    ensureCtx();
+    ensureCtx(); // also calls applySession() and creates/starts the silent clip
     if (IT.voice) IT.voice.prepare();
-    if (!mixing()) {
-      try {
-        if (!silentEl) {
-          silentEl = new Audio(makeSilentWav());
-          silentEl.loop = true;
-          silentEl.setAttribute('playsinline', '');
-        }
-        var p = silentEl.play();
-        if (p && p.catch) p.catch(function () {});
-      } catch (e) { /* ignore */ }
-    }
     try {
       if ('speechSynthesis' in g && usesSystemSpeech()) {
         var u = new SpeechSynthesisUtterance(' ');

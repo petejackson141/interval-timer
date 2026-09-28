@@ -84,7 +84,14 @@
   function isOverlayOpen() {
     return !!(overlayEl && overlayEl.classList.contains('on'));
   }
-  function sheet(html, opts) { openOverlay('<div class="grab"></div>' + html, 'sheet', opts && opts.sticky); }
+  function sheet(html, opts) {
+    var sticky = opts && opts.sticky;
+    // A tap on the dark scrim closes the sheet, but a plain <div> tap can be
+    // unreliable on iOS Safari, so every non-sticky sheet also gets a real,
+    // explicit close button — the guaranteed way back, not just the bonus gesture.
+    var closeBtn = sticky ? '' : '<button class="sheet-x" data-act="close-overlay" aria-label="Close">' + icon('close', 20) + '</button>';
+    openOverlay('<div class="grab"></div>' + closeBtn + html, 'sheet', sticky);
+  }
   function setCloseHook(fn) { closeHook = fn; }
   function isOverlaySticky() { return sticky; }
   function drawer(html) { openOverlay(html, 'drawer'); }
