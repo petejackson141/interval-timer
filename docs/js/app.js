@@ -106,6 +106,7 @@
 
       '<section class="setsec"><h3>Music</h3>' +
         setSwitch('mix', 'Keep music playing', 'Your music keeps playing under the beeps and voice. The phone’s silent switch then mutes these sounds too.') +
+        '<p class="setdesc">If the voice or beeps ever go quiet mid-workout, turning this off fixes it immediately — that mode is newer and occasionally drops out on some iPhones.</p>' +
       '</section>' +
 
       '<section class="setsec"><h3>Screen</h3>' +
@@ -123,83 +124,75 @@
     var d = new Date(), p = function (n) { return String(n).padStart(2, '0'); };
     return 'interval-timer-workouts-' + d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + '.json';
   }
+  function isIOS() {
+    var ua = g.navigator.userAgent || '';
+    return /iP(hone|ad|od)/.test(ua) || (g.navigator.platform === 'MacIntel' && g.navigator.maxTouchPoints > 1);
+  }
+  function isAndroid() { return /Android/i.test(g.navigator.userAgent || ''); }
   function canShareFiles() {
     if (!(g.navigator.share && g.navigator.canShare)) return false;
-    try { return g.navigator.canShare({ files: [new g.File(['x'], 'x.json', { type: 'application/json' })] }); }
+    try { return g.navigator.canShare({ files: [new g.File(['x'], 'x.txt', { type: 'text/plain' })] }); }
     catch (e) { return false; }
   }
-  function canDownload() {
+
+  // Saves the file straight to the device (Downloads folder on Android / desktop).
+  function downloadBackup() {
+    var blob = new g.Blob([S.exportJSON()], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
     var a = doc.createElement('a');
-    return typeof a.download !== 'undefined' && !navIsStandaloneIOS();
-  }
-  // A standalone (home-screen) iOS app has no browser chrome to catch a download,
-  // so an <a download> click there just silently does nothing.
-  function navIsStandaloneIOS() {
-    return !!g.navigator.standalone && /iP(hone|ad|od)/.test(g.navigator.platform || g.navigator.userAgent);
+    a.href = url; a.download = backupFilename();
+    doc.body.appendChild(a); a.click(); doc.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+    ui.toast('Saved to your Downloads folder');
   }
 
-  function helpSection(title, bodyHTML) {
-    return '<section class="setsec"><h3>' + title + '</h3>' + bodyHTML + '</section>';
-  }
-  function openHelp() {
-    ui.sheet(
-      '<h2 class="sheet-title">How to use Interval Timer</h2>' +
-
-      helpSection('Building a workout',
-        '<p class="setdesc">A workout is a list of sections, in the order they play:</p>' +
-        '<ul class="help-list">' +
-          '<li><b>Get ready</b> — a one-off countdown before the workout starts.</li>' +
-          '<li><b>Work</b> and <b>Rest</b> — the seconds for one exercise and its break.</li>' +
-          '<li><b>Exercises ×N</b> — repeats the sections above it (back to the last repeat count). N is how many exercises are in each set.</li>' +
-          '<li><b>Rounds ×N</b> — repeats everything above it. N is how many sets you do in total.</li>' +
-          '<li><b>Round rest</b> — a longer break, usually placed just before Rounds.</li>' +
-        '</ul>' +
-        '<p class="setdesc">Tap New workout, add sections with the + button, and tap a section to change its seconds or count, reorder it, duplicate it, or delete it. A coloured bracket shows what each Exercises or Rounds repeats. The total time at the top updates as you build. Saved workouts are edited from a card’s <b>⋯</b> menu or the menu’s “Edit this workout”.</p>'
-      ) +
-
-      helpSection('Running a workout',
-        '<p class="setdesc">Tap a workout to open it, then the play button to start. Use the two side buttons to skip to the previous or next section. Tap the pill under the timer to switch between total time left and total time elapsed. The header colour and the outline below always show where you are.</p>'
-      ) +
-
-      helpSection('Sound and voice',
-        '<p class="setdesc">In Settings you can choose:</p>' +
-        '<ul class="help-list">' +
-          '<li><b>Voice</b> — Female, Male, or My voice (your own recordings).</li>' +
-          '<li><b>Countdown</b> — 3 beeps, voice, or muted, for the last 3 seconds of every section.</li>' +
-          '<li><b>Halfway call</b> — plays halfway through a Work interval of 10 seconds or longer.</li>' +
-          '<li><b>Section sounds</b> — a short tone and/or spoken names when a section starts.</li>' +
-        '</ul>' +
-        '<p class="setdesc">Each of these has its own volume slider. “My voice” walks you through recording each phrase; anything you skip uses the Female voice instead.</p>'
-      ) +
-
-      helpSection('Music and the screen',
-        '<p class="setdesc">“Keep music playing” (in Settings → Music) lets the beeps and voice mix in over music from another app. Turning it off plays sound through the silent switch instead, but pauses your music. “Keep screen on” (in Settings → Screen) stops the phone locking mid-workout.</p>'
-      ) +
-
-      helpSection('Backing up your library',
-        '<p class="setdesc">Settings → Library backup saves every workout as one file — choose “Save to Files” to keep a copy on this phone or in iCloud Drive, or share it another way. Import reads that file back in; workouts with the same ID are replaced, and everything else is kept. This backup doesn’t include voice recordings.</p>'
-      ) +
-
-      helpSection('Adding this to your Home Screen',
-        '<p class="setdesc">In Safari, tap the Share button, then “Add to Home Screen”. Opening it from there gives you a full-screen app that also works offline.</p>'
-      )
-    );
+  // Opens the phone's own share sheet (Save to Files / iCloud Drive on iPhone,
+  // Google Drive and other apps on Android). Some browsers only allow certain file
+  // types, so if .json is refused it retries as plain text, then falls back.
+  function shareBackup() {
+    var text = S.exportJSON(), name = backupFilename();
+    var files = [
+      new g.File([text], name, { type: 'application/json' }),
+      new g.File([text], name.replace(/\.json$/, '.txt'), { type: 'text/plain' })
+    ];
+    function attempt(i) {
+      if (i >= files.length) return Promise.reject(new Error('share unavailable'));
+      if (g.navigator.canShare && !g.navigator.canShare({ files: [files[i]] })) return attempt(i + 1);
+      return g.navigator.share({ files: [files[i]], title: 'Interval Timer backup' }).catch(function (e) {
+        if (e && e.name === 'AbortError') throw e; // the person closed the sheet
+        return attempt(i + 1);
+      });
+    }
+    attempt(0).catch(function (e) {
+      if (e && e.name === 'AbortError') return;
+      if (isIOS()) ui.toast('Couldn’t open the share sheet. Use “Copy to clipboard” below.');
+      else { downloadBackup(); }
+    });
   }
 
   function openExport() {
-    var canShare = canShareFiles();
-    var canDl = canDownload();
+    var share = canShareFiles();
+    var ios = isIOS();
+    var body;
+    if (ios) {
+      body = share
+        ? '<button class="btn wide" data-act="share-export">Save to Files or iCloud Drive</button>' +
+          '<p class="note">In the sheet that opens, tap “Save to Files”, then choose <b>iCloud Drive</b> (backed up online) or <b>On My iPhone</b> (kept on this phone only).</p>'
+        : '';
+    } else {
+      body = '<button class="btn wide" data-act="dl-export">Save on this ' + (isAndroid() ? 'phone' : 'device') + '</button>' +
+        '<p class="note">Saves the file to your Downloads folder.</p>' +
+        (share
+          ? '<button class="btn ghost wide" data-act="share-export">Save to the cloud or share…</button>' +
+            '<p class="note">Opens the share sheet. Choose <b>Drive</b> to keep a copy in your Google account.</p>'
+          : '');
+    }
     ui.sheet(
       '<h2 class="sheet-title">Export library</h2>' +
       '<p class="note">Saves every workout as one file, so you can keep it somewhere safe or move it to another phone.</p>' +
-      (canShare
-        ? '<button class="btn wide" data-act="share-export">Save or share the file</button>' +
-          '<p class="note">Choose “Save to Files” to keep a copy on this phone, or share it to yourself another way.</p>'
-        : canDl
-          ? '<button class="btn wide" data-act="dl-export">Download the file</button>'
-          : '') +
+      body +
       '<p class="note">Or copy the text below into a note or email.</p>' +
-      '<textarea id="bk-text" readonly rows="6">' + ui.esc(S.exportJSON()) + '</textarea>' +
+      '<textarea id="bk-text" readonly rows="5">' + ui.esc(S.exportJSON()) + '</textarea>' +
       '<button class="btn ghost wide" data-act="copy-export">Copy to clipboard</button>'
     );
   }
@@ -210,7 +203,7 @@
       '<p class="note">Workouts with the same ID are replaced; everything else is kept.</p>' +
       (canFile
         ? '<button class="btn wide" data-act="pick-import">Choose a file</button>' +
-          '<input id="bk-file" type="file" accept="application/json,.json" hidden>' +
+          '<input id="bk-file" type="file" accept="application/json,text/plain,.json,.txt" hidden>' +
           '<p class="note">Or paste exported text below.</p>'
         : '<p class="note">Paste exported text below.</p>') +
       '<textarea id="bk-text" rows="6" placeholder="Paste exported text here"></textarea>' +
@@ -309,21 +302,8 @@
   on('test-halfway', function () { A.testHalfway(); stopTestSound(); });
   on('export', openExport);
   on('import', openImport);
-  on('share-export', function () {
-    var file = new g.File([S.exportJSON()], backupFilename(), { type: 'application/json' });
-    g.navigator.share({ files: [file], title: 'Interval Timer backup' }).catch(function (e) {
-      if (e && e.name !== 'AbortError') ui.toast('Couldn’t open the share sheet');
-    });
-  });
-  on('dl-export', function () {
-    var blob = new g.Blob([S.exportJSON()], { type: 'application/json' });
-    var url = URL.createObjectURL(blob);
-    var a = doc.createElement('a');
-    a.href = url; a.download = backupFilename();
-    doc.body.appendChild(a); a.click(); doc.body.removeChild(a);
-    setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
-    ui.toast('Downloaded');
-  });
+  on('share-export', shareBackup);
+  on('dl-export', downloadBackup);
   on('copy-export', function () {
     var ta = doc.getElementById('bk-text');
     var text = ta.value;

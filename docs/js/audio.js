@@ -12,43 +12,6 @@
 
   var ctx = null;
   var silentEl = null;
-  // Recording ("My voice") hands the microphone to the OS and, on iPhone, can
-  // leave the shared AudioContext silently broken afterwards even though it still
-  // reports state "running". So the context is thrown away and rebuilt the next
-  // time anything plays after a recording, rather than trusting resume() alone.
-  var micTainted = false;
-
-  function ensureCtx() {
-    if (ctx && (ctx.state === 'closed' || micTainted)) {
-      try { ctx.close(); } catch (e) { /* ignore */ }
-      ctx = null;
-      micTainted = false;
-    }
-    if (!ctx) {
-      var AC = g.AudioContext || g.webkitAudioContext;
-      if (AC) { try { ctx = new AC(); } catch (e) { ctx = null; } }
-    }
-    if (ctx && ctx.state !== 'running') { try { ctx.resume(); } catch (e) { /* ignore */ } }
-    return ctx;
-  }
-
-  // Called once a recording session's microphone has been released.
-  function noteMicUsed() { micTainted = true; }
-
-  // 0.5 s of 8-bit mono silence as an object URL.
-  function makeSilentWav() {
-    var rate = 8000, n = 4000;
-    var buf = new ArrayBuffer(44 + n);
-    var v = new DataView(buf);
-    function w(o, s) { for (var i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); }
-    w(0, 'RIFF'); v.setUint32(4, 36 + n, true); w(8, 'WAVE'); w(12, 'fmt ');
-    v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
-    v.setUint32(24, rate, true); v.setUint32(28, rate, true);
-    v.setUint16(32, 1, true); v.setUint16(34, 8, true);
-    w(36, 'data'); v.setUint32(40, n, true);
-    for (var i = 0; i < n; i++) v.setUint8(44 + i, 128);
-    return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
-  }
 
   function mixing() { return IT.store.settings().mix; }
 
@@ -63,6 +26,60 @@
         if (p && p.catch) p.catch(function () {});
       }
     } catch (e) { /* ignore */ }
+  }
+
+  // Two things can leave the shared AudioContext silently broken on iPhone, even
+  // though nothing in the app crashed: recording ("My voice") hands the
+  // microphone to the OS, and the "ambient" audio session used by "Keep music
+  // playing" can be interrupted by the system (a call, another app, the phone
+  // sleeping) and never hand playback fully back. Either one sets tainted, and
+  // the context is thrown away and rebuilt the next time anything plays, rather
+  // than trusting resume() alone.
+  var tainted = false;
+
+  function ensureCtx() {
+    if (ctx && (ctx.state === 'closed' || tainted)) {
+      try { ctx.close(); } catch (e) { /* ignore */ }
+      ctx = null;
+      tainted = false;
+    }
+    if (!ctx) {
+      var AC = g.AudioContext || g.webkitAudioContext;
+      if (AC) { try { ctx = new AC(); } catch (e) { ctx = null; } }
+    }
+    if (ctx && ctx.state !== 'running') { try { ctx.resume(); } catch (e) { /* ignore */ } }
+    applySession(); // reassert on every play, not just at Start — cheap, and the
+                     // ambient session above is the part most likely to have slipped.
+    return ctx;
+  }
+
+  // Called once a recording session's microphone has been released.
+  function noteMicUsed() { tainted = true; }
+
+  // The "ambient" session (see applySession, below) is a newer part of Safari and
+  // can report itself interrupted without recovering on its own. Watch for that
+  // and force a rebuild next time something plays.
+  try {
+    if (g.navigator.audioSession) {
+      g.navigator.audioSession.addEventListener('statechange', function () {
+        if (g.navigator.audioSession.state === 'interrupted') tainted = true;
+      });
+    }
+  } catch (e) { /* ignore */ }
+
+  // 0.5 s of 8-bit mono silence as an object URL.
+  function makeSilentWav() {
+    var rate = 8000, n = 4000;
+    var buf = new ArrayBuffer(44 + n);
+    var v = new DataView(buf);
+    function w(o, s) { for (var i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); }
+    w(0, 'RIFF'); v.setUint32(4, 36 + n, true); w(8, 'WAVE'); w(12, 'fmt ');
+    v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, rate, true); v.setUint32(28, rate, true);
+    v.setUint16(32, 1, true); v.setUint16(34, 8, true);
+    w(36, 'data'); v.setUint32(40, n, true);
+    for (var i = 0; i < n; i++) v.setUint8(44 + i, 128);
+    return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
   }
 
   // Does anything need the browser's built-in speech? (Only then does it need waking up.)
