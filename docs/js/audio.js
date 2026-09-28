@@ -4,9 +4,8 @@
 // "Keep music playing" (on by default) asks Safari for an "ambient" audio
 // session, so the beeps and voice mix in over whatever music is playing instead
 // of stopping it. The trade-off is that the phone's silent switch mutes them.
-// With it off, a "playback" session lets the sounds through the silent switch,
-// but pauses other apps' music. See applySession() for why a silent clip runs
-// in both modes.
+// With it off, a "playback" session plus a silent looping clip lets the sounds
+// through the silent switch, but pauses other apps' music.
 (function (g) {
   'use strict';
   var IT = (g.IT = g.IT || {});
@@ -16,26 +15,35 @@
 
   function mixing() { return IT.store.settings().mix; }
 
-  // Choose the audio session. Safe to call any time (also after recording).
-  //
-  // "Keep music playing" asks for the "ambient" category, which is what mixes
-  // with other apps' audio. On some iPhones that category alone doesn't
-  // reliably let AudioContext sound through unless there's also a real
-  // <audio>/<video> element actively playing to anchor it — so a silent looped
-  // clip is now kept running in BOTH modes, not just the non-mixing one. It's
-  // inaudible either way; only the session type below actually changes what
-  // you hear and whether it overrides the silent switch.
+  // True only if the phone's browser actually implements the audio-session API
+  // that "Keep music playing" depends on. Where it's missing, asking for
+  // "ambient" does nothing, and sound behaves like "playback" regardless of the
+  // setting — so the UI should say so rather than imply a toggle that can't work.
+  function sessionSupported() {
+    try { return !!(g.navigator.audioSession && 'type' in g.navigator.audioSession); } catch (e) { return false; }
+  }
+
+  // Choose the audio session. Called only at safe checkpoints (Start / Resume /
+  // Test, and when the context is rebuilt below) — NOT on every beep. Setting
+  // navigator.audioSession.type asks iOS to renegotiate with whatever else is
+  // playing, which is not free; calling it on every single countdown tick was
+  // making the UI stutter and, worse, kept re-triggering that renegotiation,
+  // which is the likely reason music got interrupted and never came back.
   function applySession() {
-    try { if (g.navigator.audioSession) g.navigator.audioSession.type = mixing() ? 'ambient' : 'playback'; } catch (e) { /* ignore */ }
+    try { if (sessionSupported()) g.navigator.audioSession.type = mixing() ? 'ambient' : 'playback'; } catch (e) { /* ignore */ }
     try {
-      if (!silentEl) {
-        silentEl = new Audio(makeSilentWav());
-        silentEl.loop = true;
-        silentEl.setAttribute('playsinline', '');
-      }
-      if (silentEl.paused) {
-        var p = silentEl.play();
-        if (p && p.catch) p.catch(function () {});
+      if (mixing()) {
+        if (silentEl) silentEl.pause(); // an <audio> clip here would itself fight your music for the session
+      } else {
+        if (!silentEl) {
+          silentEl = new Audio(makeSilentWav());
+          silentEl.loop = true;
+          silentEl.setAttribute('playsinline', '');
+        }
+        if (silentEl.paused) {
+          var p = silentEl.play();
+          if (p && p.catch) p.catch(function () {});
+        }
       }
     } catch (e) { /* ignore */ }
   }
@@ -45,11 +53,12 @@
   // microphone to the OS, and the "ambient" audio session used by "Keep music
   // playing" can be interrupted by the system (a call, another app, the phone
   // sleeping) and never hand playback fully back. Either one sets tainted, and
-  // the context is thrown away and rebuilt the next time anything plays, rather
-  // than trusting resume() alone.
+  // the context — and the session — are rebuilt the next time anything plays,
+  // rather than trusting resume() alone.
   var tainted = false;
 
   function ensureCtx() {
+    var rebuilding = !ctx || ctx.state === 'closed' || tainted;
     if (ctx && (ctx.state === 'closed' || tainted)) {
       try { ctx.close(); } catch (e) { /* ignore */ }
       ctx = null;
@@ -60,8 +69,7 @@
       if (AC) { try { ctx = new AC(); } catch (e) { ctx = null; } }
     }
     if (ctx && ctx.state !== 'running') { try { ctx.resume(); } catch (e) { /* ignore */ } }
-    applySession(); // reassert on every play, not just at Start — cheap, and the
-                     // ambient session above is the part most likely to have slipped.
+    if (rebuilding) applySession(); // only when actually rebuilding, not on every play
     return ctx;
   }
 
@@ -101,7 +109,8 @@
   }
 
   function unlock() {
-    ensureCtx(); // also calls applySession() and creates/starts the silent clip
+    ensureCtx();
+    applySession();
     if (IT.voice) IT.voice.prepare();
     try {
       if ('speechSynthesis' in g && usesSystemSpeech()) {
@@ -268,6 +277,6 @@
     else countdown(3);
   }
 
-  IT.audio = { unlock: unlock, suspend: suspend, cue: cue, say: say, countdown: countdown, halfway: halfway, announce: announce, testVoice: testVoice, voiceInfo: voiceInfo, context: ensureCtx, applySession: applySession, noteMicUsed: noteMicUsed,
+  IT.audio = { unlock: unlock, suspend: suspend, cue: cue, say: say, countdown: countdown, halfway: halfway, announce: announce, testVoice: testVoice, voiceInfo: voiceInfo, context: ensureCtx, applySession: applySession, sessionSupported: sessionSupported, noteMicUsed: noteMicUsed,
     testCountdown: testCountdown, testHalfway: testHalfway, preview: preview };
 })(self);

@@ -106,7 +106,9 @@
 
       '<section class="setsec"><h3>Music</h3>' +
         setSwitch('mix', 'Keep music playing', 'Your music keeps playing under the beeps and voice. The phone’s silent switch then mutes these sounds too.') +
-        '<p class="setdesc">If the voice or beeps ever go quiet mid-workout, turning this off fixes it immediately — that mode is newer and occasionally drops out on some iPhones.</p>' +
+        (A.sessionSupported()
+          ? '<p class="setdesc">If the voice or beeps ever go quiet, or your music stops and doesn’t come back, turn this off — that mode is newer and unreliable on some iPhones. Off is fully dependable.</p>'
+          : '<p class="setdesc"><b>Not supported in this browser.</b> This switch has no effect here — sound will always pause your music, the same as if it were off.</p>') +
       '</section>' +
 
       '<section class="setsec"><h3>Screen</h3>' +
