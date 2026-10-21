@@ -28,7 +28,7 @@
   function openDrawer() {
     var pid = IT.player.currentId();
     ui.drawer(
-      '<div class="drawer-head"><strong>Interval Timer</strong><span>' + IT.RELEASE + '</span><span>Version ' + IT.VERSION + '</span></div>' +
+      '<div class="drawer-head"><strong>Interval Studio</strong><span>' + IT.RELEASE + '</span><span>Version ' + IT.VERSION + '</span></div>' +
       '<nav class="menu">' +
         navBtn('nav-home', 'list', 'My workouts') +
         navBtn('nav-new', 'plus', 'New workout') +
@@ -127,7 +127,7 @@
   }
   function openHelp() {
     ui.sheet(
-      '<h2 class="sheet-title">How to use Interval Timer</h2>' +
+      '<h2 class="sheet-title">How to use Interval Studio</h2>' +
 
       helpSection('Building a workout',
         '<p class="setdesc">A workout is a list of sections, in the order they play:</p>' +
@@ -208,7 +208,7 @@
     function attempt(i) {
       if (i >= files.length) return Promise.reject(new Error('share unavailable'));
       if (g.navigator.canShare && !g.navigator.canShare({ files: [files[i]] })) return attempt(i + 1);
-      return g.navigator.share({ files: [files[i]], title: 'Interval Timer backup' }).catch(function (e) {
+      return g.navigator.share({ files: [files[i]], title: 'Interval Studio backup' }).catch(function (e) {
         if (e && e.name === 'AbortError') throw e; // the person closed the sheet
         return attempt(i + 1);
       });

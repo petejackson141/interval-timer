@@ -26,7 +26,7 @@
         '<header class="hero">' +
           '<div class="bar">' +
             '<button class="ib" data-act="menu" aria-label="Menu">' + ui.icon('menu') + '</button>' +
-            '<h1 class="title">Interval Timer</h1>' +
+            '<h1 class="title">Interval Studio</h1>' +
             '<button class="ib" data-act="settings" aria-label="Settings">' + ui.icon('sliders') + '</button>' +
           '</div>' +
           '<div class="hero-body"><div class="bigtitle">My workouts</div>' +

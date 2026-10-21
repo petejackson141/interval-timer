@@ -1,6 +1,6 @@
 {
-  "name": "Interval Timer",
-  "short_name": "Intervals",
+  "name": "Interval Studio",
+  "short_name": "Interval Studio",
   "description": "Build named interval workouts and run them with a big, bright timer.",
   "start_url": "./",
   "scope": "./",
