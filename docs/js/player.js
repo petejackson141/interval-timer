@@ -81,7 +81,13 @@
     P.els.head.style.left = 'calc(5px + (100% - 10px) * ' + Math.max(0, Math.min(1, f)).toFixed(4) + ')';
   }
 
+  // Redraw the screen, then mirror it on the Android lock-screen card.
   function paint() {
+    paintScreen();
+    nativeSync();
+  }
+
+  function paintScreen() {
     var e = P.els, st = P.status, total = P.exp.total, segs = P.exp.segments;
     if (st === 'idle') {
       setText(e.label, 'Total time'); setText(e.big, M.fmt(total));
@@ -113,6 +119,38 @@
     var shown = P.showElapsed ? Math.floor(t + 0.001) : Math.max(0, Math.ceil(total - t - 0.001));
     setText(e.pill, (P.showElapsed ? 'Total elapsed ' : 'Total left ') + M.fmt(shown));
     setHead(total ? t / total : 0);
+  }
+
+  // ----- Android lock-screen card (does nothing in the web version) -----
+  // Sends what's on screen to the native card. Only sends when something the
+  // card shows has changed (the section, the second, or play/pause), so at most
+  // about once a second.
+  function nativeSync() {
+    var N = IT.native;
+    if (!N || !N.available || !P) return;
+    var st = P.status;
+    if (st !== 'running' && st !== 'paused') { P.nativeKey = null; N.stop(); return; }
+    var t = nowSec(), segs = P.exp.segments, seg = segs[P.idx], nxt = segs[P.idx + 1];
+    var r = Math.max(1, Math.ceil(seg.end - t - 0.001));
+    var key = st + '|' + P.idx + '|' + r;
+    if (key === P.nativeKey) return;
+    P.nativeKey = key;
+    var parts = [];
+    if (seg.ctx.exercise) parts.push('Exercise ' + seg.ctx.exercise.i + ' of ' + seg.ctx.exercise.n);
+    if (seg.ctx.round) parts.push('Round ' + seg.ctx.round.i + ' of ' + seg.ctx.round.n);
+    var detail = parts.join(' \u00b7 ') || P.w.name;
+    N.update({
+      workout: P.w.name,
+      label: M.TYPES[seg.type].label,
+      color: THEME[seg.type],
+      remaining: M.fmt(r),
+      detail: st === 'paused' ? 'Paused \u00b7 ' + detail : detail,
+      next: nxt ? 'Next: ' + M.TYPES[nxt.type].label + ' ' + M.fmt(nxt.seconds) : 'Last one!',
+      totalLeft: 'Total left ' + M.fmt(Math.max(0, Math.ceil(P.exp.total - t - 0.001))),
+      running: st === 'running',
+      segMs: Math.round(seg.seconds * 1000),
+      posMs: Math.max(0, Math.round((t - seg.start) * 1000))
+    });
   }
 
   function subHTML(key, html) {
@@ -148,6 +186,7 @@
     e.prev.hidden = e.next.hidden = !active;
     e.reset.hidden = st === 'idle';
     P.subKey = null;
+    P.nativeKey = null;
     highlight();
     paint();
   }
@@ -289,8 +328,23 @@
   function leave() {
     if (!P) return;
     stopTimer(); releaseWake(); A.suspend();
+    if (IT.native) IT.native.stop();
     P = null;
   }
+  // Buttons pressed on the lock-screen card or headphones.
+  function remote(a) {
+    if (!P || (P.status !== 'running' && P.status !== 'paused')) return;
+    if (a === 'toggle' || (a === 'play' && P.status === 'paused') || (a === 'pause' && P.status === 'running')) toggle();
+    else if (a === 'next') next();
+    else if (a === 'prev') prev();
+  }
+  // Android nudges this 4 times a second while the screen is off, because it
+  // slows down timers in hidden pages. tick() works from the clock, so extra
+  // calls are harmless.
+  function pulse() {
+    if (P && P.status === 'running') tick();
+  }
+
   function currentId() { return P ? P.w.id : null; }
   function isRunning() { return !!(P && P.status === 'running'); }
 
@@ -298,5 +352,5 @@
     if (!g.document.hidden && P && P.status === 'running') { acquireWake(); tick(); }
   });
 
-  IT.player = { open: open, leave: leave, toggle: toggle, reset: reset, next: next, prev: prev, togglePill: togglePill, currentId: currentId, isRunning: isRunning };
+  IT.player = { open: open, leave: leave, toggle: toggle, reset: reset, next: next, prev: prev, togglePill: togglePill, remote: remote, pulse: pulse, currentId: currentId, isRunning: isRunning };
 })(self);
