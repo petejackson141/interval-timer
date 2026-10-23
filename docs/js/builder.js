@@ -104,9 +104,9 @@
     var sel = B.sel === it.id;
     var cv = a.cover[it.id] || {};
     var err = B.errIds.indexOf(it.id) >= 0;
-    var head = '<div class="row" data-act="b-select" data-id="' + it.id + '" role="button" tabindex="0" aria-expanded="' + sel + '">' +
+    var head = '<div class="row" data-act="b-select" data-id="' + ui.esc(it.id) + '" role="button" tabindex="0" aria-expanded="' + sel + '">' +
       ui.tIcon(it.type) + '<span class="lbl">' + T.label + (T.kind === 'count' ? caption(it, a.info) : '') + '</span><span class="val">' + valueLabel(it) + '</span></div>';
-    return '<div class="leaf t-' + it.type + (cv.ex ? ' cov-ex' : '') + (cv.rd ? ' cov-rd' : '') + (sel ? ' sel' : '') + (err ? ' err' : '') + '" data-lid="' + it.id + '">' +
+    return '<div class="leaf t-' + it.type + (cv.ex ? ' cov-ex' : '') + (cv.rd ? ' cov-rd' : '') + (sel ? ' sel' : '') + (err ? ' err' : '') + '" data-lid="' + ui.esc(it.id) + '">' +
       head + (sel ? editPanel(it, idx, len) : '') + '</div>';
   }
 

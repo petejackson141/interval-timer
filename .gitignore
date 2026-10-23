@@ -1,1 +1,4 @@
 node_modules/
+*.jks
+*.keystore
+keystore.properties

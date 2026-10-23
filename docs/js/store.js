@@ -99,24 +99,68 @@
     return JSON.stringify({ app: 'intervaltimer', version: 1, workouts: all() }, null, 2);
   }
 
+  // An imported file could come from anyone, so never trust it. Build a fresh
+  // workout that keeps only values we have checked: a safe id, a short name,
+  // known section types and numbers inside the normal limits. Anything else is
+  // dropped. Returns null if nothing usable is left.
+  var SAFE_ID = /^[A-Za-z0-9_-]{1,40}$/;
+  var MAX_SEGMENTS = 5000; // far more than any real workout
+
+  // How many timed segments a list of sections would expand to, worked out
+  // with plain arithmetic (same rules as M.expand) so a file that stacks repeat
+  // counts like 99 x 99 x 99 can't freeze the phone while we check it.
+  function segmentCount(items) {
+    var len = 0, startAny = 0, startRounds = 0, leading = true;
+    for (var i = 0; i < items.length; i++) {
+      var it = items[i];
+      if (M.TYPES[it.type].kind === 'time') {
+        len++;
+        if (leading && it.type === 'getready') startAny = startRounds = len;
+        else leading = false;
+      } else {
+        leading = false;
+        var from = it.type === 'exercises' ? startAny : startRounds;
+        len = from + (len - from) * it.value;
+        if (len > MAX_SEGMENTS) return len;
+        startAny = len;
+        if (it.type === 'rounds') startRounds = len;
+      }
+    }
+    return len;
+  }
+  function cleanWorkout(w) {
+    if (!w || typeof w !== 'object' || typeof w.name !== 'string' || !Array.isArray(w.items)) return null;
+    var flat;
+    try { flat = M.upgrade({ items: w.items }).items; } catch (e) { return null; }
+    var items = [];
+    flat.slice(0, 200).forEach(function (it) {
+      if (!it || typeof it.type !== 'string' || !Object.prototype.hasOwnProperty.call(M.TYPES, it.type)) return;
+      items.push({ id: M.uid(), type: it.type, value: M.clampValue(it.type, it.value) });
+    });
+    var name = w.name.trim().slice(0, 60);
+    var out = {
+      id: typeof w.id === 'string' && SAFE_ID.test(w.id) ? w.id : M.uid(),
+      name: name || 'Imported workout',
+      items: items
+    };
+    var size = segmentCount(items);
+    if (size === 0 || size > MAX_SEGMENTS) return null;
+    if (M.expand(out).segments.length === 0) return null; // e.g. only a Rest
+    var now = Date.now();
+    out.updatedAt = typeof w.updatedAt === 'number' && isFinite(w.updatedAt) ? w.updatedAt : now;
+    out.createdAt = typeof w.createdAt === 'number' && isFinite(w.createdAt) ? w.createdAt : out.updatedAt;
+    return out;
+  }
+
   // Merges by id; returns how many workouts were imported.
   function importJSON(text) {
     var data = JSON.parse(text);
     var incoming = Array.isArray(data) ? data : data && data.workouts;
     if (!Array.isArray(incoming)) throw new Error('No workouts found');
-    var n = 0;
-    incoming.forEach(function (w) {
-      if (!w || typeof w.name !== 'string' || !Array.isArray(w.items)) return;
-      M.upgrade(w);
-      if (M.expand(w).segments.length === 0) return;
-      w.id = w.id || M.uid();
-      w.updatedAt = w.updatedAt || Date.now();
-      w.createdAt = w.createdAt || w.updatedAt;
-      save(w);
-      n++;
-    });
-    if (!n) throw new Error('No valid workouts found');
-    return n;
+    var clean = incoming.slice(0, 500).map(cleanWorkout).filter(Boolean);
+    if (!clean.length) throw new Error('No valid workouts found');
+    clean.forEach(save);
+    return clean.length;
   }
 
   IT.store = {

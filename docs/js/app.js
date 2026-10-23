@@ -32,7 +32,7 @@
       '<nav class="menu">' +
         navBtn('nav-home', 'list', 'My workouts') +
         navBtn('nav-new', 'plus', 'New workout') +
-        (pid ? navBtn('nav-edit', 'edit', 'Edit this workout', ' data-id="' + pid + '"') : '') +
+        (pid ? navBtn('nav-edit', 'edit', 'Edit this workout', ' data-id="' + ui.esc(pid) + '"') : '') +
         navBtn('settings', 'sliders', 'Settings') +
       '</nav>' +
       '<nav class="menu menu-foot">' + navBtn('help', 'help', 'How to use') + '</nav>'

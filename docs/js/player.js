@@ -19,7 +19,7 @@
       var cv = info.cover[it.id] || {};
       var val = T.kind === 'count' ? it.value + 'X' : M.fmt(it.value);
       return '<div class="leaf t-' + it.type + (cv.ex ? ' cov-ex' : '') + (cv.rd ? ' cov-rd' : '') + '"' +
-        (T.kind === 'time' ? ' data-id="' + it.id + '"' : '') + '>' +
+        (T.kind === 'time' ? ' data-id="' + ui.esc(it.id) + '"' : '') + '>' +
         '<div class="row">' + ui.tIcon(it.type) + '<span class="lbl">' + T.label + '</span><span class="val">' + val + '</span></div></div>';
     }).join('');
   }

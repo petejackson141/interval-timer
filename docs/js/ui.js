@@ -49,10 +49,10 @@
   function strip(exp, playhead, cls) {
     var total = exp.total || 1;
     var rects = exp.segments.map(function (s) {
-      return '<rect x="' + s.start + '" y="0" width="' + s.seconds + '" height="1" class="s-' + s.type + '"/>';
+      return '<rect x="' + Number(s.start) + '" y="0" width="' + Number(s.seconds) + '" height="1" class="s-' + s.type + '"/>';
     }).join('');
     return '<div class="strip ' + (cls || '') + '" aria-hidden="true">' +
-      '<svg viewBox="0 0 ' + total + ' 1" preserveAspectRatio="none" shape-rendering="crispEdges">' + rects + '</svg>' +
+      '<svg viewBox="0 0 ' + Number(total) + ' 1" preserveAspectRatio="none" shape-rendering="crispEdges">' + rects + '</svg>' +
       (playhead ? '<i class="playhead" id="p-head"></i>' : '') + '</div>';
   }
 

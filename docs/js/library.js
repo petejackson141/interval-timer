@@ -7,9 +7,9 @@
   function card(w) {
     var exp = M.expand(w);
     var n = exp.segments.length;
-    return '<article class="card" data-act="play" data-id="' + w.id + '" role="button" tabindex="0">' +
+    return '<article class="card" data-act="play" data-id="' + ui.esc(w.id) + '" role="button" tabindex="0">' +
       '<div class="card-top"><h2>' + ui.esc(w.name) + '</h2>' +
-      '<button class="ib dark" data-act="card-menu" data-id="' + w.id + '" aria-label="Options for ' + ui.esc(w.name) + '">' + ui.icon('more') + '</button></div>' +
+      '<button class="ib dark" data-act="card-menu" data-id="' + ui.esc(w.id) + '" aria-label="Options for ' + ui.esc(w.name) + '">' + ui.icon('more') + '</button></div>' +
       ui.strip(exp, false, 'mini') +
       '<div class="card-meta"><span class="time">' + M.fmt(exp.total) + '</span><span>' + n + (n === 1 ? ' interval' : ' intervals') + '</span></div>' +
       '</article>';
@@ -49,10 +49,10 @@
     ui.sheet(
       '<h2 class="sheet-title">' + ui.esc(w.name) + '</h2>' +
       '<div class="menu">' +
-        '<button data-act="m-play" data-id="' + id + '">' + ui.icon('play') + 'Start workout</button>' +
-        '<button data-act="m-edit" data-id="' + id + '">' + ui.icon('edit') + 'Edit workout</button>' +
-        '<button data-act="m-dup" data-id="' + id + '">' + ui.icon('copy') + 'Duplicate</button>' +
-        '<button class="danger" data-act="m-del" data-id="' + id + '">' + ui.icon('trash') + 'Delete</button>' +
+        '<button data-act="m-play" data-id="' + ui.esc(id) + '">' + ui.icon('play') + 'Start workout</button>' +
+        '<button data-act="m-edit" data-id="' + ui.esc(id) + '">' + ui.icon('edit') + 'Edit workout</button>' +
+        '<button data-act="m-dup" data-id="' + ui.esc(id) + '">' + ui.icon('copy') + 'Duplicate</button>' +
+        '<button class="danger" data-act="m-del" data-id="' + ui.esc(id) + '">' + ui.icon('trash') + 'Delete</button>' +
       '</div>'
     );
   }
