@@ -73,7 +73,8 @@
     ui.sheet(
       '<h2 class="sheet-title">Settings</h2>' +
       '<div class="vercard"><div><span class="vdate">Version ' + IT.VERSION + '</span><strong class="vrel">' + IT.RELEASE + '</strong></div>' +
-        '<button class="btn ghost" data-act="check-update">Check for updates</button></div>' +
+        // The Android app is updated through the Play Store, so no button there.
+        ((IT.native && IT.native.available) ? '' : '<button class="btn ghost" data-act="check-update">Check for updates</button>') + '</div>' +
 
       '<section class="setsec"><h3>Voice</h3>' +
         '<p class="setdesc">Used wherever a setting below is set to Voice, and for section names.</p>' +
@@ -450,6 +451,7 @@
     } catch (e) { done(); }
   }
   function checkUpdate(manual) {
+    if (IT.native && IT.native.available) return; // the Android app updates through the Play Store
     if (!manual && Date.now() - lastCheck < 60000) return;
     lastCheck = Date.now();
     if (g.navigator.onLine === false) { if (manual) ui.toast('You’re offline. Connect to check for updates.'); return; }
