@@ -276,9 +276,15 @@
     if (a && a.fn) a.fn();
   });
 
-  on('nav-home', function () { ui.closeOverlay(); go('#/'); });
-  on('nav-new', function () { ui.closeOverlay(); go('#/new'); });
-  on('nav-edit', function (el) { ui.closeOverlay(); go('#/edit/' + el.getAttribute('data-id')); });
+  // Leaving the workout screen stops the timer, so ask first while one is in progress.
+  function leaveWorkout(fn) {
+    if (!IT.player.isActive()) { fn(); return; }
+    ui.confirmDialog({ title: 'End this workout?', body: 'The timer will stop.', ok: 'End workout', danger: true })
+      .then(function (yes) { if (yes) fn(); });
+  }
+  on('nav-home', function () { leaveWorkout(function () { ui.closeOverlay(); go('#/'); }); });
+  on('nav-new', function () { leaveWorkout(function () { ui.closeOverlay(); go('#/new'); }); });
+  on('nav-edit', function (el) { var id = el.getAttribute('data-id'); leaveWorkout(function () { ui.closeOverlay(); go('#/edit/' + id); }); });
   on('new', function () { go('#/new'); });
   on('play', function (el) { go('#/play/' + el.getAttribute('data-id')); });
 
@@ -467,6 +473,21 @@
       setTimeout(function () { try { t.select(); } catch (err) { /* ignore */ } }, 0);
     }
   });
+
+  // Android Back button / back swipe (called from MainActivity.java).
+  // Returns 'handled' if the app dealt with it, or 'exit' to send the app to
+  // the background. Back never closes the app, so a workout keeps running.
+  IT.back = function () {
+    if (ui.isOverlayOpen()) { ui.closeOverlay(); return 'handled'; }
+    var page = (g.location.hash || '#/').replace(/^#\/?/, '').split('/')[0];
+    if (page === 'play') {
+      if (IT.player.isActive()) return 'exit';
+      go('#/');
+      return 'handled';
+    }
+    if (page === 'edit' || page === 'new') { b.cancel(); return 'handled'; }
+    return 'exit';
+  };
 
   IT.openSettings = openSettings;
   g.addEventListener('hashchange', route);

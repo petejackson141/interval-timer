@@ -347,10 +347,12 @@
 
   function currentId() { return P ? P.w.id : null; }
   function isRunning() { return !!(P && P.status === 'running'); }
+  // Running or paused: a workout is in progress and leaving would lose it.
+  function isActive() { return !!(P && (P.status === 'running' || P.status === 'paused')); }
 
   g.document.addEventListener('visibilitychange', function () {
     if (!g.document.hidden && P && P.status === 'running') { acquireWake(); tick(); }
   });
 
-  IT.player = { open: open, leave: leave, toggle: toggle, reset: reset, next: next, prev: prev, togglePill: togglePill, remote: remote, pulse: pulse, currentId: currentId, isRunning: isRunning };
+  IT.player = { open: open, leave: leave, toggle: toggle, reset: reset, next: next, prev: prev, togglePill: togglePill, remote: remote, pulse: pulse, currentId: currentId, isRunning: isRunning, isActive: isActive };
 })(self);
