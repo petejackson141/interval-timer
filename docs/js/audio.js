@@ -13,7 +13,15 @@
   var ctx = null;
   var silentEl = null;
 
-  function mixing() { return IT.store.settings().mix; }
+  // In the Android app the beeps and voice always mix over other apps' music
+  // (Web Audio there doesn't take the phone's audio focus). The silent looping
+  // clip used when this is off is an iPhone trick for the silent switch; on
+  // Android it takes audio focus, dims Spotify and never gives it back. So in
+  // the Android app the setting is ignored and mixing is always on.
+  function mixing() {
+    if (IT.native && IT.native.available) return true;
+    return IT.store.settings().mix;
+  }
 
   // True only if the phone's browser actually implements the audio-session API
   // that "Keep music playing" depends on. Where it's missing, asking for
