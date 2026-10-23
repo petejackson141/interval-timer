@@ -172,7 +172,7 @@
 
   function backupFilename() {
     var d = new Date(), p = function (n) { return String(n).padStart(2, '0'); };
-    return 'interval-timer-workouts-' + d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + '.json';
+    return 'interval-studio-workouts-' + d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + '.json';
   }
   function isIOS() {
     var ua = g.navigator.userAgent || '';
@@ -220,7 +220,22 @@
     });
   }
 
+  // Inside the Android app: Android's own "Save as" screen and share sheet
+  // (WorkoutPlugin.java). The browser download used by the web version does
+  // nothing in the app, so it isn't offered there.
+  function openNativeExport() {
+    ui.sheet(
+      '<h2 class="sheet-title">Export library</h2>' +
+      '<p class="note">Saves every workout as one file, so you can keep it somewhere safe or move it to another phone.</p>' +
+      '<button class="btn wide" data-act="n-save-export">Save to a file</button>' +
+      '<p class="note">Choose where it goes: <b>Downloads</b> on this phone, or <b>Drive</b> to keep a copy in your Google account.</p>' +
+      '<button class="btn ghost wide" data-act="n-share-export">Send or share…</button>' +
+      '<p class="note">Send it by WhatsApp or email, or to any other app.</p>'
+    );
+  }
+
   function openExport() {
+    if (IT.native && IT.native.available) { openNativeExport(); return; }
     var share = canShareFiles();
     var ios = isIOS();
     var body;
@@ -360,6 +375,14 @@
   on('import', openImport);
   on('share-export', shareBackup);
   on('dl-export', downloadBackup);
+  on('n-save-export', function () {
+    IT.native.saveFile(backupFilename(), S.exportJSON()).then(function (r) {
+      if (r && r.saved) { ui.closeOverlay(); ui.toast('Backup saved'); }
+    }, function () { ui.toast('Couldn’t save the file. Try “Send or share…” instead.'); });
+  });
+  on('n-share-export', function () {
+    IT.native.shareFile(backupFilename(), S.exportJSON()).catch(function () { ui.toast('Couldn’t open the share sheet.'); });
+  });
   on('copy-export', function () {
     var ta = doc.getElementById('bk-text');
     var text = ta.value;

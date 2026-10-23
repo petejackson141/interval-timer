@@ -47,5 +47,14 @@
     call('stop');
   }
 
-  IT.native = { available: ok, update: update, stop: stop };
+  // Library backup. Both return a promise; they reject outside the Android app.
+  function ask(method, data) {
+    if (!ok) return Promise.reject(new Error('Not in the Android app'));
+    try { return Promise.resolve(C.nativePromise(NAME, method, data)); }
+    catch (e) { return Promise.reject(e); }
+  }
+  function saveFile(name, text) { return ask('saveFile', { name: name, text: text }); }   // -> { saved: true/false }
+  function shareFile(name, text) { return ask('shareFile', { name: name, text: text }); }
+
+  IT.native = { available: ok, update: update, stop: stop, saveFile: saveFile, shareFile: shareFile };
 })(self);
