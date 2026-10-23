@@ -35,7 +35,7 @@
         (pid ? navBtn('nav-edit', 'edit', 'Edit this workout', ' data-id="' + ui.esc(pid) + '"') : '') +
         navBtn('settings', 'sliders', 'Settings') +
       '</nav>' +
-      '<nav class="menu menu-foot">' + navBtn('help', 'help', 'How to use') + '</nav>'
+      '<nav class="menu menu-foot">' + navBtn('help', 'help', 'How to use') + navBtn('privacy', 'list', 'Privacy policy') + '</nav>'
     );
   }
 
@@ -123,6 +123,11 @@
       '<section class="setsec"><h3>Library backup</h3>' +
         '<div class="setbtns"><button class="btn ghost" data-act="export">Export library</button>' +
         '<button class="btn ghost" data-act="import">Import library</button></div>' +
+      '</section>' +
+
+      '<section class="setsec"><h3>About</h3>' +
+        '<p class="setdesc">No accounts, no ads, no tracking. Your workouts and recordings stay on this phone.</p>' +
+        '<button class="btn ghost wide" data-act="privacy">Privacy policy</button>' +
       '</section>'
     );
   }
@@ -189,6 +194,24 @@
         '<p class="setdesc">In Safari, tap the Share button, then “Add to Home Screen”. Opening it from there gives you a full-screen app that also works offline.</p>'
       ))
     );
+  }
+
+  // The privacy policy lives in one place, privacy.html (also the public page
+  // linked from Google Play). Here it's loaded from the app's own files and shown
+  // in a sheet, so the app and the web page can never say different things.
+  function openPrivacy() {
+    ui.closeOverlay();
+    g.fetch('privacy.html').then(function (r) {
+      if (!r.ok) throw new Error('missing');
+      return r.text();
+    }).then(function (html) {
+      var page = new g.DOMParser().parseFromString(html, 'text/html');
+      var main = page.getElementById('policy');
+      if (!main) throw new Error('missing');
+      ui.sheet('<h2 class="sheet-title">Privacy policy</h2><div class="policy">' + main.innerHTML + '</div>');
+    }).catch(function () {
+      ui.toast('Couldn’t open the privacy policy.');
+    });
   }
 
   function backupFilename() {
@@ -303,6 +326,7 @@
   on('menu', openDrawer);
   on('settings', openSettings);
   on('help', function () { ui.closeOverlay(); openHelp(); });
+  on('privacy', openPrivacy);
   on('close-overlay', function () { ui.closeOverlay(); });
   on('dlg-yes', function () { ui.settleDialog(true); ui.closeOverlay(); });
   on('dlg-no', function () { ui.settleDialog(false); ui.closeOverlay(); });

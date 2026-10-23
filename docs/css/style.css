@@ -560,3 +560,12 @@ button:focus-visible, [role="button"]:focus-visible { outline: 3px solid #2B5BFF
   border: 0; border-radius: 50%; background: #F1F2F6; color: var(--ink);
 }
 .sheet-x:active { background: #E3E5EC; }
+
+/* Privacy policy sheet (text comes from privacy.html) */
+.policy { padding: 0 2px 12px; font-size: 15px; line-height: 1.5; }
+.policy h2 { font-size: 17px; margin: 22px 0 6px; }
+.policy p, .policy li { margin: 6px 0; }
+.policy ul { padding-left: 20px; margin: 6px 0; }
+.policy .muted { opacity: .7; font-size: 14px; }
+.policy .box { border: 1px solid rgba(0,0,0,.1); border-radius: 14px; padding: 12px 14px; margin: 14px 0; }
+.policy a { color: #F0343F; }
