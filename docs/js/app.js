@@ -126,6 +126,7 @@
     return '<section class="setsec"><h3>' + title + '</h3>' + bodyHTML + '</section>';
   }
   function openHelp() {
+    var inApp = !!(IT.native && IT.native.available); // the Android app, not the web version
     ui.sheet(
       '<h2 class="sheet-title">How to use Interval Studio</h2>' +
 
@@ -142,7 +143,11 @@
       ) +
 
       helpSection('Running a workout',
-        '<p class="setdesc">Tap a workout to open it, then the play button to start. Use the two side buttons to skip to the previous or next section. Tap the pill under the timer to switch between total time left and total time elapsed. The header colour and the outline below always show where you are.</p>'
+        '<p class="setdesc">Tap a workout to open it, then the play button to start. Use the two side buttons to skip to the previous or next section. Tap the pill under the timer to switch between total time left and total time elapsed. The header colour and the outline below always show where you are.</p>' +
+        (inApp
+          ? '<p class="setdesc">The workout keeps running when you lock the phone or switch apps. A card on the lock screen and in the notifications shows the current section in its colour, with Previous, Pause and Next buttons. Tap the card to come back to the app.</p>' +
+            '<p class="setdesc">The Back button never stops a workout: it just puts the app in the background. To stop, pause and tap the reset button at the top right.</p>'
+          : '')
       ) +
 
       helpSection('Sound and voice',
@@ -156,17 +161,28 @@
         '<p class="setdesc">Each of these has its own volume slider. “My voice” walks you through recording each phrase; anything you skip uses the Female voice instead.</p>'
       ) +
 
-      helpSection('Music and the screen',
-        '<p class="setdesc">“Keep music playing” (in Settings → Music) lets the beeps and voice mix in over music from another app. Turning it off plays sound through the silent switch instead, but pauses your music. “Keep screen on” (in Settings → Screen) stops the phone locking mid-workout.</p>'
-      ) +
+      (inApp
+        ? helpSection('The screen',
+            '<p class="setdesc">“Keep screen on” (in Settings → Screen) stops the phone locking mid-workout. With it off, the workout and its sounds carry on with the screen locked.</p>'
+          )
+        : helpSection('Music and the screen',
+            '<p class="setdesc">“Keep music playing” (in Settings → Music) lets the beeps and voice mix in over music from another app. Turning it off plays sound through the silent switch instead, but pauses your music. “Keep screen on” (in Settings → Screen) stops the phone locking mid-workout.</p>'
+          )) +
 
       helpSection('Backing up your library',
-        '<p class="setdesc">Settings → Library backup saves every workout as one file. On iPhone, choose “Save to Files”, then iCloud Drive (online) or On My iPhone (local). On Android, choose “Save on this phone” for your Downloads folder, or “Save to the cloud” and pick Drive. This backup doesn’t include voice recordings.</p>'
+        inApp
+          ? '<p class="setdesc">Your workouts are kept on this phone only, so make a backup now and then. Settings → Export library saves every workout as one file:</p>' +
+            '<ul class="help-list">' +
+              '<li><b>Save to a file</b> — choose Downloads on this phone, or Drive to keep a copy in your Google account.</li>' +
+              '<li><b>Send or share…</b> — send it by WhatsApp, email or any other app, for example to move your workouts to a new phone.</li>' +
+            '</ul>' +
+            '<p class="setdesc">To bring workouts back, use Settings → Import library and choose the file. Your other workouts stay as they are; if a workout in the file is already on the phone, the copy in the file replaces it. Voice recordings aren’t included in the backup.</p>'
+          : '<p class="setdesc">Settings → Library backup saves every workout as one file. On iPhone, choose “Save to Files”, then iCloud Drive (online) or On My iPhone (local). On Android, choose “Save on this phone” for your Downloads folder, or “Save to the cloud” and pick Drive. This backup doesn’t include voice recordings.</p>'
       ) +
 
-      helpSection('Adding this to your Home Screen',
+      (inApp ? '' : helpSection('Adding this to your Home Screen',
         '<p class="setdesc">In Safari, tap the Share button, then “Add to Home Screen”. Opening it from there gives you a full-screen app that also works offline.</p>'
-      )
+      ))
     );
   }
 
@@ -269,10 +285,11 @@
       (canFile
         ? '<button class="btn wide" data-act="pick-import">Choose a file</button>' +
           '<input id="bk-file" type="file" accept="application/json,text/plain,.json,.txt" hidden>' +
-          '<p class="note">Or paste exported text below.</p>'
-        : '<p class="note">Paste exported text below.</p>') +
-      '<textarea id="bk-text" rows="6" placeholder="Paste exported text here"></textarea>' +
-      '<button class="btn ghost wide" data-act="do-import">Import</button>'
+          '<p class="note">Pick a backup made with Export library, from Downloads, Drive or anywhere else on the phone.</p>'
+        // Fallback only for a browser that can't open files: paste the text instead.
+        : '<p class="note">Paste exported text below.</p>' +
+          '<textarea id="bk-text" rows="6" placeholder="Paste exported text here"></textarea>' +
+          '<button class="btn ghost wide" data-act="do-import">Import</button>')
     );
   }
 
