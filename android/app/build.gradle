@@ -1,5 +1,55 @@
 apply plugin: 'com.android.application'
 
+/* ---------- Interval Studio: version numbers, taken automatically from the app ----------
+   Android needs two version values, and Google Play refuses an update unless
+   versionCode goes UP every time. Instead of editing them here by hand, both
+   are read from docs/js/config.js (the file you already bump every release):
+     versionName = RELEASE without the "v", e.g. 'v1.24' -> "1.24"
+                   (what the Play Store and Android's App info screen show)
+     versionCode = minutes since 1 Jan 2025 from VERSION (DD.MM.YYYY.HHMM),
+                   e.g. 23.10.2026.1040 -> 951040 - always bigger for a newer version
+   So for every new upload to Google Play: bump RELEASE and VERSION in config.js.
+   If the file can't be read, the build stops with a clear message rather than
+   quietly shipping a wrong version. */
+def readIntervalStudioVersion = {
+    def f = rootProject.file('../docs/js/config.js')
+    if (!f.exists()) throw new GradleException("Can't find ${f} to read RELEASE and VERSION")
+    def text = f.getText('UTF-8')
+    def r = (text =~ /RELEASE\s*=\s*'v?(\d+(?:\.\d+)*)'/)
+    if (!r.find()) throw new GradleException("RELEASE in config.js is not like 'v1.23'")
+    def v = (text =~ /VERSION\s*=\s*'(\d{2})\.(\d{2})\.(\d{4})\.(\d{2})(\d{2})'/)
+    if (!v.find()) throw new GradleException("VERSION in config.js is not in DD.MM.YYYY.HHMM format")
+    def (dd, mo, yyyy, hh, mi) = (1..5).collect { v.group(it) as int }
+    def minutes = java.time.LocalDateTime.of(yyyy, mo, dd, hh, mi).toEpochSecond(java.time.ZoneOffset.UTC).intdiv(60)
+    def base    = java.time.LocalDateTime.of(2025, 1, 1, 0, 0).toEpochSecond(java.time.ZoneOffset.UTC).intdiv(60)
+    return [code: (int) (minutes - base), name: r.group(1)]
+}
+def intervalStudioVersion = readIntervalStudioVersion()
+
+/* ---------- Interval Studio: release signing key (the "upload key") ----------
+   Every build sent to Google Play must be signed with the SAME upload key
+   (alias "upload", made 22 Oct 2026), or Play rejects it.
+   The key file and its password are NEVER put on GitHub. They live in
+   android/keystore.properties (ignored by Git), which says where the key is
+   and what its passwords are:
+       storeFile=C:/Users/Pete/<your key folder>/<your key file>.jks
+       storePassword=...
+       keyAlias=upload
+       keyPassword=...
+   If that file is missing, Run (debug builds) still works as normal and you
+   can still sign with Build > Generate Signed App Bundle as before. */
+def keystorePropsFile = rootProject.file('keystore.properties')
+def keystoreProps = new Properties()
+def useUploadKey = false
+if (keystorePropsFile.exists()) {
+    keystorePropsFile.withInputStream { keystoreProps.load(it) }
+    if (keystoreProps.values().any { it.toString().contains('PUT-') }) {
+        logger.warn("Interval Studio: android/keystore.properties still has placeholder values - release builds will NOT be signed")
+    } else {
+        useUploadKey = true
+    }
+}
+
 android {
     namespace = "com.petejackson.intervalstudio"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -7,8 +57,8 @@ android {
         applicationId "com.petejackson.intervalstudio"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.23"
+        versionCode intervalStudioVersion.code   // automatic - see the top of this file
+        versionName intervalStudioVersion.name
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,8 +66,21 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            if (useUploadKey) {
+                storeFile     file(keystoreProps['storeFile'])
+                storePassword keystoreProps['storePassword']
+                keyAlias      keystoreProps['keyAlias']
+                keyPassword   keystoreProps['keyPassword']
+            }
+        }
+    }
     buildTypes {
         release {
+            if (useUploadKey) {
+                signingConfig signingConfigs.release   // see "release signing key" at the top
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
