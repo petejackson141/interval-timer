@@ -30,6 +30,7 @@
     pause: '<rect x="6" y="5" width="4.2" height="14" rx="1.4" ' + FILL + '/><rect x="13.8" y="5" width="4.2" height="14" rx="1.4" ' + FILL + '/>',
     next: '<path d="M5 5.6v12.8a.5.5 0 0 0 .8.4l9-6.4a.5.5 0 0 0 0-.8l-9-6.4a.5.5 0 0 0-.8.4z" ' + FILL + '/><rect x="16.5" y="5" width="2.8" height="14" rx="1.2" ' + FILL + '/>',
     prev: '<path d="M19 5.6v12.8a.5.5 0 0 1-.8.4l-9-6.4a.5.5 0 0 1 0-.8l9-6.4a.5.5 0 0 1 .8.4z" ' + FILL + '/><rect x="4.7" y="5" width="2.8" height="14" rx="1.2" ' + FILL + '/>',
+    exit: '<path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/><path d="M10 8l-4 4 4 4"/><path d="M6 12h10"/>',
     replay: '<path d="M4 12a8 8 0 1 0 2.6-5.9"/><path d="M4 4v5h5"/>',
     // section icons (drawn inside a 24px box, outlined like the reference design)
     t_getready: '<circle cx="12" cy="12" r="9.5"/><path d="M9.6 7.2v9.8"/><path d="M9.6 7.8h6.2l-1.7 2.6 1.7 2.6H9.6" ' + FILL + '/>',

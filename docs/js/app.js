@@ -35,7 +35,11 @@
         (pid ? navBtn('nav-edit', 'edit', 'Edit this workout', ' data-id="' + ui.esc(pid) + '"') : '') +
         navBtn('settings', 'sliders', 'Settings') +
       '</nav>' +
-      '<nav class="menu menu-foot">' + navBtn('help', 'help', 'How to use') + navBtn('privacy', 'list', 'Privacy policy') + '</nav>'
+      '<nav class="menu menu-foot">' + navBtn('help', 'help', 'How to use') + navBtn('privacy', 'list', 'Privacy policy') + '</nav>' +
+      // Exit app only exists in the Android app (a browser tab can't close itself).
+      (IT.native && IT.native.available
+        ? '<nav class="menu menu-foot">' + navBtn('exit-app', 'exit', 'Exit app', ' class="danger"') + '</nav>'
+        : '')
     );
   }
 
@@ -346,6 +350,14 @@
   on('nav-home', function () { leaveWorkout(function () { ui.closeOverlay(); go('#/'); }); });
   on('nav-new', function () { leaveWorkout(function () { ui.closeOverlay(); go('#/new'); }); });
   on('nav-edit', function (el) { var id = el.getAttribute('data-id'); leaveWorkout(function () { ui.closeOverlay(); go('#/edit/' + id); }); });
+  // Exit app (Android only): ask first if a workout is running, stop it, then close.
+  on('exit-app', function () {
+    leaveWorkout(function () {
+      ui.closeOverlay();
+      IT.player.leave();
+      IT.native.exitApp();
+    });
+  });
   on('new', function () { go('#/new'); });
   on('play', function (el) { go('#/play/' + el.getAttribute('data-id')); });
 

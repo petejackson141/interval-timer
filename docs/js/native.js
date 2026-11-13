@@ -47,6 +47,13 @@
     call('stop');
   }
 
+  // Menu > Exit app: removes the lock-screen card and closes the Android app.
+  function exitApp() {
+    if (!ok) return;
+    active = false;
+    call('exitApp');
+  }
+
   // Library backup. Both return a promise; they reject outside the Android app.
   function ask(method, data) {
     if (!ok) return Promise.reject(new Error('Not in the Android app'));
@@ -56,5 +63,5 @@
   function saveFile(name, text) { return ask('saveFile', { name: name, text: text }); }   // -> { saved: true/false }
   function shareFile(name, text) { return ask('shareFile', { name: name, text: text }); }
 
-  IT.native = { available: ok, update: update, stop: stop, saveFile: saveFile, shareFile: shareFile };
+  IT.native = { available: ok, update: update, stop: stop, exitApp: exitApp, saveFile: saveFile, shareFile: shareFile };
 })(self);

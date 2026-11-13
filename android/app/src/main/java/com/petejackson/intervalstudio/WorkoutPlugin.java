@@ -30,6 +30,7 @@ import java.nio.charset.StandardCharsets;
  *
  * JavaScript calls:  update({...})  to show / refresh the lock-screen card
  *                    stop()         to remove it
+ *                    exitApp()      to remove it AND close the app (menu > Exit app)
  * Android sends back an "action" event: prev, toggle, play, pause, next, or tick.
  *
  * Library backup (Settings > Export library):
@@ -89,6 +90,21 @@ public class WorkoutPlugin extends Plugin {
     public void stop(PluginCall call) {
         main.post(WorkoutService::stop);
         call.resolve();
+    }
+
+    /**
+     * Menu > Exit app. Removes the lock-screen card, then closes the app and
+     * takes it off the recent-apps list. Added for phones (e.g. Xiaomi) that
+     * won't let you swipe the workout notification away.
+     */
+    @PluginMethod
+    public void exitApp(PluginCall call) {
+        call.resolve();                          // answer JavaScript first, before the page goes away
+        main.post(() -> {
+            WorkoutService.stop();               // remove the lock-screen card
+            Activity a = getActivity();
+            if (a != null) a.finishAndRemoveTask();  // close the app
+        });
     }
 
     // ----- library backup -----
