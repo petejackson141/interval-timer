@@ -6,7 +6,11 @@ import android.content.ClipData;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.media.AudioAttributes;
 import android.os.Build;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
+import android.os.VibratorManager;
 import android.os.Handler;
 import android.net.Uri;
 import android.os.Looper;
@@ -14,6 +18,7 @@ import androidx.activity.result.ActivityResult;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
+import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
@@ -24,6 +29,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 /**
  * The link between the web app (js/native.js) and WorkoutService.
@@ -31,6 +37,7 @@ import java.nio.charset.StandardCharsets;
  * JavaScript calls:  update({...})  to show / refresh the lock-screen card
  *                    stop()         to remove it
  *                    exitApp()      to remove it AND close the app (menu > Exit app)
+ *                    vibrate({pattern: [on, off, on, ...]})  buzz the phone (milliseconds)
  * Android sends back an "action" event: prev, toggle, play, pause, next, or tick.
  *
  * Library backup (Settings > Export library):
@@ -105,6 +112,42 @@ public class WorkoutPlugin extends Plugin {
             Activity a = getActivity();
             if (a != null) a.finishAndRemoveTask();  // close the app
         });
+    }
+
+    /**
+     * Vibrate instead of a beep or voice (Settings > Countdown / Halfway call > Vibrate).
+     * pattern = buzz, pause, buzz, ... in milliseconds, e.g. [150] or [150, 100, 150].
+     * Uses "alarm" vibration so it still works with the screen off during a workout.
+     */
+    @PluginMethod
+    @SuppressWarnings("deprecation")
+    public void vibrate(PluginCall call) {
+        long[] pattern;
+        try {
+            List<Object> parts = call.getArray("pattern", new JSArray()).toList();
+            pattern = new long[parts.size() + 1];
+            pattern[0] = 0;                                  // Android's pattern starts with a wait: none
+            for (int i = 0; i < parts.size(); i++) pattern[i + 1] = ((Number) parts.get(i)).longValue();
+        } catch (Exception e) {
+            call.reject("Bad vibration pattern");
+            return;
+        }
+        Vibrator v;
+        if (Build.VERSION.SDK_INT >= 31) {                   // Android 12+: phones can have several vibrators
+            VibratorManager vm = (VibratorManager) getContext().getSystemService(Context.VIBRATOR_MANAGER_SERVICE);
+            v = vm == null ? null : vm.getDefaultVibrator();
+        } else {
+            v = (Vibrator) getContext().getSystemService(Context.VIBRATOR_SERVICE);
+        }
+        if (v != null && v.hasVibrator() && pattern.length > 1) {
+            AudioAttributes alarm = new AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_ALARM)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build();
+            if (Build.VERSION.SDK_INT >= 26) v.vibrate(VibrationEffect.createWaveform(pattern, -1), alarm);
+            else v.vibrate(pattern, -1, alarm);
+        }
+        call.resolve();
     }
 
     // ----- library backup -----

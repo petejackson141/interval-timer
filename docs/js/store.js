@@ -10,7 +10,7 @@
   var K_SEEDED = 'intervaltimer:seeded';
   var DEFAULTS = { voiceType: 'female', countdown: 'voice', volume: 0.7, half: 'voice', halfVolume: 0.7, beep: true, cueVolume: 0.7, names: false, namesVolume: 0.7, mix: true, wake: true };
   var VOLUMES = ['volume', 'halfVolume', 'cueVolume', 'namesVolume']; // one slider per sound setting
-  var CHOICES = { voiceType: ['female', 'male', 'mine'], countdown: ['beeps', 'voice', 'off'], half: ['voice', 'beep', 'off'] };
+  var CHOICES = { voiceType: ['female', 'male', 'mine'], countdown: ['beeps', 'voice', 'vibrate', 'off'], half: ['voice', 'beep', 'vibrate', 'off'] };
 
   var memory = {}; // fallback if localStorage is unavailable
 

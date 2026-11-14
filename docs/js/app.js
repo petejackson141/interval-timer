@@ -60,7 +60,7 @@
   function setSlider(key, forKey, label) {
     var st = S.settings();
     var pct = Math.round(st[key] * 100);
-    var off = st[forKey] === 'off' || st[forKey] === false;
+    var off = st[forKey] === 'off' || st[forKey] === 'vibrate' || st[forKey] === false;   // no volume for vibration
     return '<div class="slider' + (off ? ' off' : '') + '" data-for="' + forKey + '"><span class="k">' + label + '</span>' +
       '<input type="range" min="5" max="100" step="5" value="' + pct + '" data-range="' + key + '" style="--p:' + pct + '%" aria-label="' + label + '">' +
       '<output>' + pct + '%</output></div>';
@@ -74,6 +74,8 @@
   }
 
   function openSettings() {
+    // The Vibrate choice only appears where the phone can actually vibrate (not iPhone).
+    var vib = A.canVibrate() ? [['vibrate', 'Vibrate']] : [];
     ui.sheet(
       '<h2 class="sheet-title">Settings</h2>' +
       '<div class="vercard"><div><span class="vdate">Version ' + IT.VERSION + '</span><strong class="vrel">' + IT.RELEASE + '</strong></div>' +
@@ -89,15 +91,15 @@
       '</section>' +
 
       '<section class="setsec"><h3>Countdown</h3>' +
-        '<p class="setdesc">Plays in the last 3 seconds of every section: three beeps, or a spoken 3, 2, 1.</p>' +
-        setSeg('countdown', [['beeps', '3 beeps'], ['voice', 'Voice'], ['off', 'Muted']]) +
+        '<p class="setdesc">Plays in the last 3 seconds of every section: three beeps, a spoken 3, 2, 1' + (A.canVibrate() ? ', or three buzzes (the last one longer)' : '') + '.</p>' +
+        setSeg('countdown', [['beeps', '3 beeps'], ['voice', 'Voice']].concat(vib, [['off', 'Muted']])) +
         setSlider('volume', 'countdown', 'Volume') +
         '<button class="btn ghost wide" data-act="test-countdown">Test countdown</button>' +
       '</section>' +
 
       '<section class="setsec"><h3>Halfway call</h3>' +
-        '<p class="setdesc">Halfway through each Work interval (10 seconds or longer). Voice says “Half way there”.</p>' +
-        setSeg('half', [['voice', 'Voice'], ['beep', 'Beep'], ['off', 'Muted']]) +
+        '<p class="setdesc">Halfway through each Work interval (10 seconds or longer). Voice says “Half way there”' + (A.canVibrate() ? '; Vibrate gives a double buzz' : '') + '.</p>' +
+        setSeg('half', [['voice', 'Voice'], ['beep', 'Beep']].concat(vib, [['off', 'Muted']])) +
         setSlider('halfVolume', 'half', 'Volume') +
         '<button class="btn ghost wide" data-act="test-halfway">Test halfway call</button>' +
       '</section>' +
@@ -168,8 +170,8 @@
         '<p class="setdesc">In Settings you can choose:</p>' +
         '<ul class="help-list">' +
           '<li><b>Voice</b> — Female, Male, or My voice (your own recordings).</li>' +
-          '<li><b>Countdown</b> — 3 beeps, voice, or muted, for the last 3 seconds of every section.</li>' +
-          '<li><b>Halfway call</b> — plays halfway through a Work interval of 10 seconds or longer.</li>' +
+          '<li><b>Countdown</b> — 3 beeps, voice, vibrate (Android) or muted, for the last 3 seconds of every section.</li>' +
+          '<li><b>Halfway call</b> — voice, beep, vibrate (Android) or muted, halfway through a Work interval of 10 seconds or longer.</li>' +
           '<li><b>Section sounds</b> — a short tone and/or spoken names when a section starts.</li>' +
         '</ul>' +
         '<p class="setdesc">Each of these has its own volume slider. “My voice” walks you through recording each phrase; anything you skip uses the Female voice instead.</p>'
@@ -409,7 +411,7 @@
   }
   on('set-choice', function (el) {
     S.setSetting(el.getAttribute('data-key'), el.getAttribute('data-val'));
-    dimSlider(el.getAttribute('data-key'), el.getAttribute('data-val') === 'off');
+    dimSlider(el.getAttribute('data-key'), el.getAttribute('data-val') === 'off' || el.getAttribute('data-val') === 'vibrate');
     if (el.getAttribute('data-key') === 'voiceType') {
       var mv = doc.getElementById('myvoice');
       if (mv) mv.hidden = el.getAttribute('data-val') !== 'mine';

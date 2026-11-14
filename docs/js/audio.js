@@ -234,19 +234,34 @@
     return say(text, { volume: volume });
   }
 
-  // The last-three-seconds call: 3 beeps, spoken 3-2-1, or nothing.
+  // Vibration. The Android app uses the phone's vibrator directly (works with the
+  // screen off); a browser uses navigator.vibrate where it exists. iPhones have
+  // neither, so the Vibrate choice is hidden there. Returns false if it can't buzz.
+  function canVibrate() {
+    return !!(IT.native && IT.native.available) || typeof g.navigator.vibrate === 'function';
+  }
+  function buzz(pattern) {
+    if (IT.native && IT.native.available) return IT.native.vibrate(pattern);
+    try { if (typeof g.navigator.vibrate === 'function') return g.navigator.vibrate(pattern); } catch (e) { /* ignore */ }
+    return false;
+  }
+
+  // The last-three-seconds call: 3 beeps, spoken 3-2-1, vibration, or nothing.
   function countdown(n) {
     var s = IT.store.settings();
     if (s.countdown === 'off') return;
     if (s.countdown === 'voice' && speak('n' + n, String(n), s.volume)) return;
+    // short buzz on 3 and 2, a long one on 1 so you feel the section change coming
+    if (s.countdown === 'vibrate' && buzz(n === 1 ? [450] : [150])) return;
     tone(880, 0, 0.14, 0.4 * s.volume);
   }
 
-  // The halfway call inside a Work interval: spoken, a single beep, or nothing.
+  // The halfway call inside a Work interval: spoken, a single beep, a double buzz, or nothing.
   function halfway() {
     var s = IT.store.settings();
     if (s.half === 'off') return;
     if (s.half === 'voice' && speak('half', 'Half way there', s.halfVolume)) return;
+    if (s.half === 'vibrate' && buzz([150, 120, 150])) return;
     tone(1175, 0, 0.3, 0.45 * s.halfVolume);
   }
 
@@ -286,5 +301,5 @@
   }
 
   IT.audio = { unlock: unlock, suspend: suspend, cue: cue, say: say, countdown: countdown, halfway: halfway, announce: announce, testVoice: testVoice, voiceInfo: voiceInfo, context: ensureCtx, applySession: applySession, sessionSupported: sessionSupported, noteMicUsed: noteMicUsed,
-    testCountdown: testCountdown, testHalfway: testHalfway, preview: preview };
+    canVibrate: canVibrate, testCountdown: testCountdown, testHalfway: testHalfway, preview: preview };
 })(self);

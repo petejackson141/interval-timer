@@ -54,6 +54,13 @@
     call('exitApp');
   }
 
+  // Settings > Vibrate: buzz the phone. pattern = [on, off, on, ...] in milliseconds.
+  function vibrate(pattern) {
+    if (!ok) return false;
+    call('vibrate', { pattern: pattern });
+    return true;
+  }
+
   // Library backup. Both return a promise; they reject outside the Android app.
   function ask(method, data) {
     if (!ok) return Promise.reject(new Error('Not in the Android app'));
@@ -63,5 +70,5 @@
   function saveFile(name, text) { return ask('saveFile', { name: name, text: text }); }   // -> { saved: true/false }
   function shareFile(name, text) { return ask('shareFile', { name: name, text: text }); }
 
-  IT.native = { available: ok, update: update, stop: stop, exitApp: exitApp, saveFile: saveFile, shareFile: shareFile };
+  IT.native = { available: ok, update: update, stop: stop, exitApp: exitApp, vibrate: vibrate, saveFile: saveFile, shareFile: shareFile };
 })(self);
